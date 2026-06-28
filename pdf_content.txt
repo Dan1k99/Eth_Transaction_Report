@@ -1,0 +1,802 @@
+=== PAGE 1 ===
+PhysicaA600(2022)127504
+Contents lists available at ScienceDirect
+PhysicaA
+journal homepage: www.elsevier.com/locate/physa
+Ethereumtransactiontracking:Inferringevolutionof
+transactionnetworksvialinkprediction
+DanLin a,JiajingWu b,∗,QiXuan c,ChiK.Tse d
+a School of Software Engineering, Sun Yat-sen University, Zhuhai, China
+b School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou, China
+c College of Information Engineering, Zhejiang University of Technology, Hangzhou, China
+d Department of Electrical Engineering, City University of Hong Kong, Tai Chee Avenue, Kowloon Tong, Hong Kong
+a r t i c l e i n f o
+Article history:
+Received1March2022
+Receivedinrevisedform30March2022
+Availableonline6May2022
+Keywords:
+Ethereum
+Complexnetworks
+Cryptocurrency
+Transactiontracking
+Linkprediction
+Networkevolution
+a b s t r a c t
+Blockchainisanemergingtechnologywhichhasattractedwideattentioninrecentyears.
+Asoneoftheblockchainapplications,cryptocurrencyhasdevelopedrapidlyinrecent
+years,attractingcriminalstocommitfraudandmoneylaundering.Therefore,tobetter
+protect the legitimate interests of users and help formulate an effective supervision,
+it is necessary to track and follow transaction records on blockchain-based systems.
+This paper studies the problem of transaction tracking in Ethereum from a network
+perspective, aiming to study explainable strategies for money flow generation. We
+firstcollectthespace-intensivetransactiondatafromEthereumblockchainandmodel
+themastemporalweightedmulti-digraphs.Avarietyoftrackingstrategiesconsidering
+different transaction factors (i.e., frequency and amount) are proposed, and the cor-
+responding random-walk based link predictions method are designed for evaluation.
+Our method gets explainable results from the experiments, demonstrating that both
+transaction frequency and amount influence the generation of new transactions in
+Ethereum.ThismeanswhentrackingthemoneyflowamongEthereumaccounts,we
+should pay more attention to those transaction paths having a shorter time interval
+and a larger amount. From these transaction features, the proposed random-walk
+based link prediction framework is found to be an effective method for transaction
+tracking.Furthermore,weshowanapplicationoftransactiontrackingvialinkprediction
+effectivelyenhancetheabilitytodetectthesuspiciousaccountsinEthereum.
+©2022PublishedbyElsevierB.V.
+1. Introduction
+Blockchain is an open and distributed ledger technology managed by a peer-to-peer network via a consensus
+mechanism[1],andmostblockchainsystemsinheritthecharacteristicsofbeingdecentralized,open,autonomous,as
+wellasusertamperabilityandanonymity.Astherepresentativeof‘‘blockchain1.0’’,Bitcoinisthefirstdecentralized
+peer-to-peercryptocurrencywhosepricehitanall-timehighof19,850USDonDecember17,2017.Launchedin2015,
+Ethereumiscurrentlythelargestopen-sourceblockchain-basedplatformthatsupportsdistributedapplications(i.e.,smart
+contracts)[2],andhasbeenwidelyrecognizedasthecoreof‘‘blockchain2.0’’.Thecorrespondingcryptocurrency, Ether,
+isthedigitalassetoftheaccountinEthereum,anditisalsothemediumusedtopaytransactionfees.Withitsrapid
+developmentinthepastfewyears,Etherhasbecomethesecondlargestcryptocurrencyanditsmarketcapitalization
+∗ Correspondingauthor.
+E-mail address: wujiajing@mail.sysu.edu.cn(J.Wu).
+https://doi.org/10.1016/j.physa.2022.127504
+0378-4371/©2022PublishedbyElsevierB.V.
+
+=== PAGE 2 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+reachedaround20billionUSDin2018.Attentionhasbeenpaidtothemodelingandunderstandingoftheblockchain
+systemsandcorrespondingcryptocurrenciesofBitcoin,Ethereum[3–12].
+However,asblockchainprojectscontinuetodevelopandmorepeopleinvest,blockchain-relatedcrimeshavemush-
+roomed.Takingadvantageoftheanonymityofblockchain,criminalsattempttoevadesupervisionandengageinmoney
+laundering, smuggling and other illegal activities. For instance, Bitcoin is reported to be involved in several illegal
+transactionsonthedarkwebmarketplaces,e.g.,‘‘SilkRoad’’,whichhiddrugdealings,assassinationsandothercrimes[13].
+Besides,inEthereum,whichsupportsthefunctionalityofsmartcontracts,moretypesofcybercrimeshavebeenreported,
+suchasexploits,hacks,phishing,andPonzischemes[14].
+Thepastfewyearshavewitnessedtheemergenceofvariousprojectsandcompaniesconcerningtransactiontracking
+ontheblockchain,suchasChainalysis(www.chainalysis.com),Etherscan(),andCipherTrace().Transactiontrackingplays
+animportantroleforregulators,cryptocurrencyexchanges,andinvestors.Forregulators,transactiontrackingcanassist
+themtodetectfraudbehaviorsandgangs,followtaintedmoney,getbackstolencryptocurrencies,andimprovethe
+regulatoryecosystem.Forexample,itisreportedthatChainalysishelpedtheFBIidentifytwoagentsoncorruptioncharges
+ofstealingbitcoinfromanonlinedrugmarketoperator[15].Moreover,forcryptocurrencyexchanges,transactiontracking
+improvestheircapabilitiesofKnowYourTransaction(KYT)andanti-moneylaundering(AML),andthushelpsthem
+betterunderstandthemarketandprotectstherightsoflaw-abidingusers.Besides,forordinaryusersorcryptocurrency
+serviceproviders,theycanemploytheresultsoftransactiontrackingtokeeptheirmoneyawayfrompollutedfundsand
+suspiciousentities.
+Networksarewidelyadoptedasastandardrepresentationofdataforunderstandinginteractionsbetweenobjectsin
+variouscomplexsystems[16].Atpresent,mostofthecryptocurrencytransactiontrackingsystemsadoptthemechanism
+combiningthenetworkvisualizationsystemandmanualanalysis,suchasCoinHolmes(),whichisacryptocurrency
+AMLsystemofPeckshield(https://peckshield.com/).Intuitively,thehugetransactionrecordsofcryptocurrenciescan
+be modeled as a network to facilitate analysis. For example, Ethereum accounts in records can be represented as
+nodesofthenetwork.Nodesarelinkedifthecorrespondingaccountshavetransactionsbetweenthem.Astransaction
+relationshipshavedirectionandmultipletransactionsbetweentwoaccountsareexpected,itismorecomprehensiveto
+modelEthereumtransactionrecordsasadirectedmultigraph,i.e.,multi-digraph,ratherthanasimplegraph.Moreover,
+eachedgerepresentsatransactionweightedbytheamountandassignedwithatimestampintheEthereumtransaction
+network.
+In the world of cryptocurrency, obtaining the key downstream accounts help track the money flow of criminals.
+However,moneylaunderersoftenusealargenumberofaddressestodispersedirtymoneyduringtheillegaltransferof
+assets.Asthedepthoftrackingincreases,theconstructednetworkbecomesmorecomplexandthedownstreamaddresses
+growexponentially.Thismakesitdifficultforregulatorsandexchangestorecognizedirtymoneyandrespondintimeto
+emergenciesintime.Fig.1showsanexampleofmoneylaunderingbyawealthmanagementwalletTokenStore,which
+hasbeenexposedasasuspectedrunaway.SinceJune10,2019,thelarge-valueassetsofTokenStorehavebeendivided
+intonewaddressesseveraltimeslayerbylayerforintensivemoneylaundering.Themoneyflowstartswithaccount
+0x068a,1fromJune20,2019.Accountswithdifferentcolorsdenotedifferentlayersofthemoneylaunderingprocedure.
+Forexample,account0xf64d 2isoneofthe1-hopneighborsofaccount0x068a,andaccount0x4708 3isoneofthe2-hop
+neighbors.Nodesattachedwith‘‘ZB’’,‘‘Binance’’,‘‘OKEx’’,and‘‘Huobi’’arecryptocurrencyexchangesZB 4Binance,5OKEx,6
+Huobi,7respectively.
+Fromtheaboveexample,wecanunderstandthatanti-moneylaunderingisacomplexfinancialissue.Sofar,the
+academic community has also paid attention to the research issues related to transaction tracking for maintaining
+financialsecurityandhealthydevelopmentofblockchainecosystems.Meiklejohnetal.[17]utilizeheuristicclustering
+togroupBitcoinaddressesbasedonevidenceofsharedauthority,whichperformsanewperspectiveforbitcoinde-
+anonymizationandtracking.Yousafetal.[18]developtechniquestotracecross-ledgersactivitybycapturingcomplex
+transactionalbehaviorsbasedondatafromShapeShift.Suchcross-currencytracingtechniqueswilldetercriminalswhotry
+toobscuretheirflowofmoney.Wuetal.[12]performthestudyontheidentificationofmixingservicesandtracingillegal
+transactionsinBitcoin.Asystematicanalysiswithseveraldesignedfeaturesisconductedtocharacterizehowaddresses
+belongingtomixingservices.Wuetal.[19]tacklethetransactiontrackingtaskasgraphsearchingthetransactionnetwork
+usingPersonalizedPageRank.Theytrackthefundflowfromthesourcehackaddresseswiththethreekindsofheuristic
+designs,namely,trackingtendency,weightpollution,andtemporalreasoning.
+In this work, we try to study the problem of transaction tracking in Ethereum from a network perspective, and
+investigatethetrackingstrategiesinspiredbyarandom-walkbasedlinkpredictionmodel.Specifically,fromamicroscopic
+viewpoint,weproposetotraceandpredicttransactionsonthishugetransactionnetworkvialinkprediction,which
+1 0x068ac6ed5efc38a6266261b4486a8907fd7ea15f.
+2 0xf46d9659b2e2c5198faf44f5caf5203afb1949b5.
+3 0x474879c0e9e722ae9f14c509f3cf83d49f2d9461.
+4 https://www.zb.com/.
+5 https://www.binance.com/.
+6 https://okex.co.kr/kr/view/.
+7 https://www.huobi.com/.
+2
+
+=== PAGE 3 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.1. MoneylaunderingofexposedwalletTokenStore’s‘‘running’’assetsinEthereum,visualizedbyCoinHolmes.
+isaclassicprobleminnetworkscience.Moreover,fromamacroscopicviewpoint,weanalyzehowthefrequencyof
+transactionsandtheamountbeingtransferredwouldinfluencetheevolutionofthetransactionnetwork,leadingtobetter
+designoftransactiontrackingmethods.
+Themaincontributionsofthepaperareasfollows:
+•First,tothebestofourknowledge,thisisthe firsttrytostudythetransactiontrackingproblemvialinkprediction
+oncryptocurrencytransactionnetworks.
+•Second,weproposearandom-walkbasedmodelandgetexplainableresultsabouttheinterplaybetweentransaction
+featuresandnetworkevolutionofthetransactionnetworks.Weexplorehowtwoimportanttransactionfactors
+intransactionnetworks,namely,transactionamountandtime,impacttheevolutionoftheEthereumtransaction
+network.
+•Third,weshowanapplicationofthetransactiontrackingtechniquebyconductingphishingaccountclassification,
+whichfurtherdemonstratelinkpredictioncanhelpsuperviseandmonitorthetransactions.
+Section 2 introduces the related work in the field of blockchain transaction data analysis and network science.
+Section 3 describes how we collect transaction history from Ethereum, followed by the procedures of data cleaning
+andpreprocessing.InSection4,wedemonstratetheframeworkforEthereumtransactiontracking,andillustratehow
+inferencecanbemadeontheinterplaybetweentransactioninformationandnetworkevolutionviaanetwork-embedding
+basedlinkpredictionmodel.InSection5,wefurtherinvestigatetheeffectivenessofrandom-walkedbasedmethods.
+InSection6,wefirstcollectphishingaccounttransactions,andmodelthesuspiciousaccountsdetectionasabinary
+classificationproblem,andthenusethetransactiontrackingframeworkvialinkpredictiontoimprovetheclassification
+performance.WeconcludethepaperanddiscussfuturedirectionsinSection7.
+2. Relatedwork
+Inthissection,wepresenttwocategoriesofrelatedwork.Thefirstoneisrelatedtotheanalysisandminingof
+blockchaintransactionrecords.Thesecondcategoryincludesnetworkevolutiontheoriesandlinkpredictionalgorithms,
+fromwhichthenetworkevolutionmechanismcanbeinferred.
+3
+
+=== PAGE 4 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.2. Relationsbetweentransactiontracking,networkevolutionandlinkprediction.
+2.1. Blockchain transaction analysis and mining
+Transactionrecordsareconfidentialdatainfinancialandbusinessservicessectors.Theproblemof‘‘isolateddata
+island’’hinderstheresearchoffinancialbigdatamining.Recently,theopennatureofblockchaindataprovidesresearchers
+withpubliclyaccessibletransactiondata,andexistingstudiesonanalysisandminingofblockchaintransactionrecords
+canbecategorizedintotwomaingroups.Oneisconcernedwiththeuseofappropriatemetricsandtopologicalfeaturesof
+complexnetworkstoanalyzeandcharacterizeblockchaintransactionnetworks[20–25].Theotherdealswithminingthe
+blockchaintransactionviamachine-learning-basedapproaches,andthesestudiesmainlyfocusontheissuesofownership
+identificationandanomalydetectioninblockchainsystems[12,14,26–28].
+Apartfromtheownershipidentificationanddetectionproblem,transactiontrackingofcryptocurrenciesplaysanactive
+roleinimprovingthefinancialsecurityofblockchainsystems.Currentresearchontransactiontrackingmainlyfocuses
+ontracingthecapitalflowbyinspectingthetransactionrecords,whilepredictingfuturetransactionsisrarelyexplored.
+Inthispaper,weconsiderthepredictionoftransactionsandattempttoidentifythekeyfactorsaffectingtheevolutionof
+Ethereumtransactionnetworkviatemporallinkprediction.
+2.2. Network evolution and link prediction
+Thestudyoftherelationshipbetweenvarioustopologicalstructuresandpropertiesofcomplexnetworksandtheir
+dynamicfunctionshavebeenactivelypursued[29].Inparticular,networkevolutionandlinkpredictionaretwoimportant
+topicstowhichagreatdealofresearchefforthasbeendevoted.Instudyingthenetworkevolutionmechanisms,atypical
+approachistoinvestigatewhetheranetworkbuiltfromsomespecificgrowingruleshasstatisticalpropertiescloseto
+thoseofrealnetworks,suchasErdős–Rényi’srandomgraphmodel[30],Watts–Strogatz’ssmall-worldmodel[31],and
+Barabási–Albert’sscale-freenetworkmodel[32].
+Thepurposeoflinkpredictionistoestimatethelikelihoodoftheexistenceoflinksbetweennodepairsbasedonthe
+currentnetworkinformation,e.g.,theobservedlinkandnodeattributes[33].Existinglinkpredictionmethodscanbe
+classifiedintoseveralcategories,namely,similarity-based[34,35],probabilisticandmaximumlikelihood-based[36],and
+dimensionalityreduction-based[37].Infact,networkevolutionandlinkpredictioncomplementeachother.Ontheone
+hand,indepthanalysisofthenetworkevolutionmechanismcanhelpresearchersdesignbettermethodsandimprove
+theperformanceoflinkprediction.Ontheotherhand,withthetheoreticalframeworkandevaluationmethodoflink
+prediction,evolutionmodelswithdifferentfactorscanbeevaluatedquantitatively.Inaddition,linkpredictionfocuses
+onpredictingthegenerationofnewlinksinthenetworkandnetworkevolutionstudiesthevariationtrendsofthe
+wholenetwork.Forinstance,Liuetal.[38]discussedabasicframeworkforpredictingtheevolutionmechanismbylink
+prediction,andrevealedthefactorsaffectingtheevolutionoftheChineseaviationnetwork.Theresultsoflinkprediction
+showedthattheexistenceofairroutesbetweentwocitiesisgovernedbyanumberofeconomicfactors.
+Research questions. Weframeourstudyfromtheperspectiveofnetworkscience,i.e.,thesamplingstrategiesinspiredby
+linkprediction.InFig.2,weplottherelationshipsbetweentransactiontracking,networkevolution,andlinkprediction
+inEthereum.Sincethecryptocurrencytransactionisakindoffinancialandsocialbehavior[25],thetransactionpatterns
+aredrivenbyintrinsicmechanisms,andthetransactionnetworksshouldexhibitsomecorrespondingevolutionrules.
+Transaction tracking of cryptocurrency consists of money flow generation, which is similar to biased random walk
+generationinnetworkscience.Intransactiontracking,theaccountsequencesthroughwhichdirtymoneyflowsareshaped
+byparticularpreferences.Forexample,hackersaremoreanxioustomovedirtymoneytowardssaferplaces,leadingto
+largeramounttransfers.Here,thedifferentpreferencesofmoneyflowscanbemodeledasbiasedrandomwalks.Abiased
+randomwalkistosamplenodeswithpresetstrategiesinnetworks.Thedesignofthetransactiontrackingstrategiescan
+bequantifiedastheequationoftheselectedprobabilityofrandomwalkgenerations.Weseektoanswerthefollowing
+researchquestions:
+4
+
+=== PAGE 5 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.3. Ethereumblockchaindatastructure.
+•RQ1:Whichkindoftrackingstrategyismoreinlinewiththerealcryptocurrencytrend,andmoresuitablefor
+trackingtransactionsinEthereum?
+•RQ2:Can the random-walk based link prediction methods outperform other node-similarity based methods in
+Ethereumtransactionnetwork?
+•RQ3:Doestheproposedlink-predictionbasedtrackingframeworkaffectmachinelearningtasksonEthereum,such
+assuspiciousaccountdetection?
+3. Ethereumtransactionrecords
+Inthissection,weintroducethebackgroundofEthereumtransactiondata,anddescribehowwecollectandmodel
+transactionrecordsfromEthereum.
+3.1. Transaction data
+Asthelargestblockchainplatformsupportingsmartcontracts,EthereumprovidesaTuringscriptinglanguage.The
+Ethereum virtual machine enables Ethereum to handle intelligent peer-to-peer contracts and supports complex and
+flexibledecentralizedapplications.Tofacilitatetheimplementationofsmartcontracts,Ethereumintroducestheconcept
+of‘‘account’’andallocatesstoragespaceforrecordingaccountbalances,transactions,codes,etc.Usually,transactionstake
+placebetweenaccountswhicharerepresentedbyaddressescomposedofprefix‘‘0x’’,acommonidentifierforhexadeci-
+mal,concatenatedwiththerightmost20bytesofpublickey.Here,weuse‘‘account’’and‘‘address’’interchangeably.As
+showninFig.3,thetransactionhistoryisrecordedintheblockchain,whichconsistsofdatablockslinkedinchronological
+order.Sofar,theEthereumblockchaincontainsmorethan8millionblocks.
+Etherscan,anEthereumexplorer,providesAPIsforuserstoinquireaboutthetransactionrecordsofgivenaccounts.In
+thiswork,weuseEtherscanAPIstocollecttransactioninformationsuchasaddresses,tokens,pricesandotheractivities
+takingplaceinEthereum,asshowninFig.4.FromEtherscan,wecancollecttheaddressesofsenderandrecipient,
+timestamp,amountvalueofthetransactions.
+3.2. Data processing
+As mentioned above, since the debut of Ethereum, massive transaction data have been stored in the blockchain.
+Moreover,themajorityofaccountsarenotalwaysactive,andtheEthereumtransactionnetworkconstructedbythe
+entiretransactionrecordsisextremelylargeandsparse.Somuchsothatithasbecomeincreasinglydifficultandtime-
+consumingtoprocessthewholeEthereumtransactionnetworkfordataanalysisandminingtasks.Tothisend,existing
+workusuallyfocusesondatawithincertaintimeintervalsordividedbysnapshots.Forinstance,tobuildandanalyze
+Ethereumtransactiongraphs,Guoetal.[24]selected100thousandblockswithblocknumberfrom200,000to300,000,
+andanother200thousandblockswithblocknumberfrom3,000,000to3,200,000.Suchsampleddataisreferredtoas
+time-intensivetransactiondata.Althoughthesetransactionsfrequentlyoccur,thecorrespondingtransactionnetworkis
+usuallyextremelysparseorevennotfullyconnected,makingnetworkanalysisandspatialinformationextractionvery
+difficult.
+5
+
+=== PAGE 6 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.4. Screenshotoftransactioninformationsearchon‘‘Etherscan’’.
+Fig.5. VisualizationsofthenetworktopologiescollectedfromEthereumtransactiondatasets.
+Inthiswork,weadoptthe K-ordersamplingmethodproposedinourpriorwork[39]toobtain space-intensivetrans-
+actiondata,whosecorrespondingtransactionnetworkisalwaysconnectedandcanbetterreservethelocalinformation
+ofthetargetnodes.Specifically,centeredbyselectedaccounts,wesamplesubgraphswithtwoparameters,namely, Kin
+and Kout,tocontrolthedepthofsamplinginwardandoutwardfromthecenter,respectively.When Kin= Kout= K,wecan
+view Kastheradiusofsampledsubgraphs[39].WithEtherscanAPIs,werecursivelyquerythetransactionrecordsuntil
+theconstructedsubgraphsreachthegivenradius K.Duringtherecursivecollectionprocedure,duplicatetransactionsare
+deleted.Usingthissamplingmethod,wecollectthreesubgraphswithdifferentsizefromEthereumforexperiments,and
+labelthemasEthereumG1,EthereumG2,andEthereumG3.Thedatasetspresentedinthisstudycanbefoundinonline
+repositories(https://github.com/lindan113/xblock-network_analysis),andisalsoaccessibleonourdatasetwebsiteXBlock
+(http://xblock.pro).Thedetailedinformationofdatasetsaregiveninourpriorwork[39].Thevisualizationsofthesegraphs
+areshowninFig.5.
+3.3. Network construction
+Thetimewhenatransactiontakesplaceandtheamountbeingtransferredaretwoimportantattributesofafinancial
+transaction.Inmostpreviousblockchainanalyses,thetransactionrecordswereconstructedasasimplenetwork.Inthis
+work,inordertoincorporatethetemporalandweightedinformationoftransactionsintoconsideration,wemodelthe
+Ethereumtransactionrecordsasa temporal weighted multi-digraph (TWMDG)whichisproposedin[39].Thecollected
+Ethereum data are represented as TWMDGG(V , E), whereV denotes the set of accounts andE denotes the set of
+transactionsbetweenaccounts.Notethat‘‘Multi’’indicatesmulti-transactionsbetweenaccountpairsaremodeledas
+6
+
+=== PAGE 7 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.6. Frameworkforinferringtheinterplaybetweentransactioninformationandnetworkevolution.
+Fig.7. Atoyexampleofembeddingthenetworkintoa2Dspace.
+differentedges.Eachedge( u, v, w,t)betweensenderaccount uandrecipientaccount visidentifiedbythetransaction
+timestamp tandvalue w(seeFigs.6and9).
+4. Methodfortransactiontracking(RQ1)
+4.1. Framework
+Thetransactionrecordsarefirstconvertedtoatemporalweightedmulti-digraph.Then,transactionpathsareidentified
+byrunningrandomwalkstoobtainco-occurrencestatistics.Theoriginalgraphismappedintotheembeddedspace
+by representation learning, whichresortstoadimensionreductionmethod.Finally,byusinglinkpredictionmethods,
+wepredictthetransactions,andinfertheimpactoftransactionfeaturesontheevolutionoftransactionnetworksby
+comparingtheresultsderivedfromdifferentwalkstrategies.
+4.2. Embedding based link prediction
+Linkpredictionisaquantitativetooltoinvestigatetheevolutionmechanismofnetworkscomprehensively.Themoney
+flowinatransactionnetworkislikeasequenceofaccountswhohavetransferred Ether inchronologicalorder,and
+therefore the high-order neighborhood should be considered in transaction tracking. However, most of the popular
+similarity-basedlinkpredictionmethodscanonlylearnfromtheone-hopneighborhood.Thislimitationmayleadto
+lowaccuracyoflinkpredictiontask.High-orderproximityexplores k-step( k ≥3)relationsandcapturesthesimilarity
+betweennodesclosetoeachotherinthenetwork[40].
+Networkembedding,alsoknownasnetworkrepresentationlearning,isadimensionreductiontechniqueforobtaining
+aneffectiverepresentationoflargenetworksthatpreservesthenodeneighborhoodstructure[41].AsshowninFig.7,
+similarnodesintheoriginalnetworkshouldhavesimilarnodevectorsintheembeddedlow-dimensionalspace.
+Recently,random-walkbasednetworkembeddinghasbeenwidelyusedtodealwithlinkpredictiontasksinvarious
+practicalnetworks,e.g.,DeepWalk[42],node2vec[37],and continuous time dynamic network embedding (CTDNE)[43].
+Besides,high-orderproximitycanbetterbepreservedinthebiasedrandomwalk.Temporal-random-walkbasednet-
+workembeddingcapturetheinformationofhigh-orderneighborhoodbythewalkercontinuouslysamplingnodesin
+chronologicalorder.Inthispaper,fortheEthereumtransactionnetworkmodeledastemporalweightedmulti-digraph,
+weproposearandom-walkbasednodeembeddingframeworkbyconsideringdifferentwalkingstrategiesbasedonsome
+keytransactionfeatures.Inthisway,theoriginalnetworkistransformedintodifferentcollectionsofnodesequencesby
+samplingtruncatedrandomwalks.Theoccurrencefrequencyofanodeonshortrandomwalksanditscontentreflect
+theproximitybetweenthem.Therefore,theobtainednodesequenceswithdifferentwalkpreferenceswouldresultin
+variousnoderepresentationsviaanoptimizationprocedure.Theproposedembeddingmethodconsistsofthefollowing
+twoparts:
+7
+
+=== PAGE 8 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Algorithm1 TemporalWalk
+Input:TWMDG G =(V , E),startnode u,walklength l
+Output: walkn
+1:Let v1 = u,initialize walknto[ v1], walketo ∅
+2:Randomlysamplefirstedge e1,append e1to walke
+3:Let v2 = dst(e1),append v2to walkn
+4:for i =2to l −1do
+5: curn= walkn[-1], cure= walke[-1]
+6: ei= GetNextEdgeWithStrategies(curn, cure)
+7: Append eito walke,
+8: Let vi+1= dst(nexte),append vi+1to walkn,
+9:endfor
+10:return walkn
+Algorithm2 TemporalWeightedMultidigraphEmbedding
+Input:TemporalWeightedMultidigraph G =(V , E),dimensions d,walkspernode r,walklength l,windowsize k
+Output: Φ(v)for ∀v ∈ V
+1:Initializesetoftemporalwalks TWto ∅
+2:for iter =1to rdo
+3: forall nodes u ∈ Vdo
+4: walkn = TemporalWalk(G, u, l)
+5: Append walknto TW
+6: endfor
+7:endfor
+8: Φ= StochasticGradientDescent(k, d, TW)
+9:return Φ ∈ R|V |×d
+1. Arandomwalkgenerator providesasetofwalkswithtemporalconstraintsandinaccordancewithgivenflexible
+biasedstrategies.Weadopttherandomwalkgeneratorfrom[39],andthepseudocodefortemporalwalkgeneration
+isgiveninAlgorithm1.Inthefunction GetNextEdgeWithStrategies,weselectthenextedgeforthetemporalwalk.
+InTables1and2,wedescribedifferentsamplingbiasesbyformulatingtheselectionprobabilityforeachtemporal
+successive edgee ∈ Lt(vi) [39], considering transaction time and amount, respectively. The previous walk is
+representedas ei−1 withtimestamp t = T(ei−1),andthecurrentnodeisrepresentedas vi,wherefunction T
+getsthetimestampoftransaction ei−1.Thefunction W getsthevaluetransferredoftransaction ei−1.Wedenote
+η− : R → Z+asafunctionthatmapsthetimestampsofedgestopositiveintegersofdescendingorder,andlet
+η+ : R → Z+beafunctionthatmapsthetimestamps(oramount)ofedgestopositiveintegersofascending
+order.Forexample,ifthecurrenttemporalsuccessiveedges ea, eband ec havetransactionvalues1ETH,10ETH
+and100ETH,respectively,thenwehave η+(ea) =1, η+(eb) =2,and η+(ec) =3.If ea, eband echavetransaction
+timestamp1526666690,1499026232and1497221976,respectively,thenwehave η−(ea) = 1, η−(eb) = 2,and
+η−(ec) =3.AdetailedexplanationofeachsamplingstrategywillbegiveninSection4.4.
+2. Anoptimizationprocedure isappliedtoachievenodeembeddingsandadoptsa‘‘skip-gram’’learningalgorithm
+forupdatingthenetwork[44,45].Theprocedureessentiallytakesamaximumlikelihoodoptimizationapproach.
+Giventhesamplingresultsoftemporalrandomwalks,weformulatethetaskoflearningtimeandweightdependent
+graphembeddinginaTWMDGasanoptimizationproblem.Usingtheskip-grammodel,noderepresentationsare
+learnedbymaximizingtheprobabilityofobservingtheneighborhoodofanodeconditionedonitsembedding.
+ThepseudocodefortheabovetemporalweightedmultidigraphembeddingisgiveninAlgorithm2.Theoutputisan
+embeddingfunction Φ : V → Rd(withnodeembeddingdimension d ≪ |V |)whichpreservestheoriginalnetwork
+informationincludingnodeproximity.Thisembeddingmethodisscalabletolargenetworks.Thetimecomplexityof
+randomwalkgeneratoris O(r|V |l)andthetimecomplexityofoptimizationprocedureis O(|V |log |V |),where rdenotes
+walkspernode, |V |denotesthenumberofnodesand ldenoteswalklength.
+Then,weobtaintheembeddedfeaturesofadirectedlinkfromnodes vito vjbyconcatenatingtheirnodeembeddings,
+i.e., Fi,j = [Φ(vi), Φ(vj)].If i ̸= j, Fi,j ̸= Fj,i.Linkpredictioncanbeviewedasasupervisedbinaryclassificationproblem,
+i.e.,whetherthereisalinkbetweenagivenpairofnodesornot.Thuswetrain support vector machine (SVM),whichis
+aclassicbinaryclassifier,toclassifythelinksareexistinthetestset.Insummary,differentwalkingstrategiesgenerate
+differentnodesequenceswithdifferentco-occurrencestatistics,andresultinvariousnoderepresentationswithdifferent
+proximity.
+8
+
+=== PAGE 9 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Table1
+Samplingbiasesfordifferentwalkingstrategieswithtimestamp(timeelapsedintransaction)ofedges
+considered. Tmaxisthelargesttimestampofcurrentnetwork.
+Samplingcriterion Walkingstrategies Definingequation
+FromWS 4toWS 1,
+therandomwalks
+tendtosamplethe
+successive
+transactionswitha
+shortertime
+interval.
+WS1 PT(e) = Tmax−T(e)∑
+e′ ∈Lt(vi) (Tmax−T(e′))
+WS2 PT(e) = η−(T(e))∑
+e′ ∈Lt(vi) η−(T(e′))
+WS3 PT(e) = 1
+|Lt(vi)|
+WS4 PT(e) = η+(T(e))∑
+e′ ∈Lt(vi) η+(T(e′))
+Table2
+Samplingbiasesfordifferentwalkingstrategieswithedgeweight(transactionamount)considered.
+Samplingcriterion Walkingstrategies Definingequation
+FromWS 7toWS 5,the
+randomwalkstendto
+samplethesuccessive
+transactionswithalarger
+transactionamount.
+WS5 PW(e) = W(e)∑
+e′ ∈Lt(vi) W(e′)
+WS6 PW(e) = η+(W(e))∑
+e′ ∈Lt(vi) η+(W(e′))
+WS7 PW(e) = 1
+|Lt(vi)|
+Fig.8. Themainstepsoftemporallinkprediction. train_pos, test_posarethepositivelinksofthetrainingsetandtestset,and train_neg, test_neg
+arethenegativelinksofthetrainingsetandtestset,respectively.
+Different network representations may show different link prediction performance under a binary classifier. By
+comparinglinkpredictionresults,wecanidentifythewalkingstrategythatachievesabettersamplingandpredictionof
+Ethereumtransactions,andfurtherinferthekeyfactorsinfluencingtheevolutionofthewholesystem.
+4.3. Evaluation of temporal link prediction
+Inconventionallinkpredictionexperimentswherelinkshavenotimestamp,theobservedlinksofthenetworkare
+usuallyrandomlydividedintotrainingandtestsets.Fortheproblemoflinkpredictioninatemporalnetworkconsidered
+here,itismorereasonabletosplitthetrain-testsetaccordingtothetimestampandusetheexistinglinkstopredictthe
+occurrencesoffuturelinks.
+Themainstepsofthetemporallinkprediction,asillustratedinFig.8,are:
+1. Sortallthecollectededgesfromtransactionrecordsaccordingtotheirtimestampsandassume50%oftheearlier
+edgesastheknownedges,whichconstitutethecurrentnetwork.
+2. Performlearningofnoderepresentationsofthecurrentnetwork Φ(v)for ∀v ∈ Vviagraphembeddingmethods.
+3. Forthebinaryclassifier,the50%linkswithearliertimestampsintheoriginalnetworkactaspositivesamplesof
+thetrainingset,andtheremainder(the50%linkswithlatertimestamps)aretreatedasthepositivesamplesof
+thetestset.Besides,werandomlysampleanequalnumberofnodepairswithnolinkasnegativesamplesofthe
+trainingsetandthetestset.
+9
+
+=== PAGE 10 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig. 9.Link prediction results in terms of AUC considering different walking strategies. (a) considering the transaction time, (b) considering the
+transactionamount.
+4.4. Results and discussions
+4.4.1. Transaction information
+First,weanalyzetheeffectoftransactioninformation,specificallythe time elapsed between successive transactions
+andthe amount being transferred,ontheevolutionofEthereumtransactionnetwork.Considerarandomwalkwhichis
+currentlystoppingatnode vi.Thenextnodeoftherandomwalkisdecidedbyselectingatemporallyvalidedgeofnode
+vi.Asmentionedbefore,thisedgeisselectedfromthesetoftemporalsuccessiveedges, Lt(vi),usingaparticularsampling
+bias.Here,weemployseveralbiasedrandomwalksamplingmethodsbasedonthe temporaland amountinformationfor
+linkpredictionexperiments,aimingtodemonstratehowthesetwofactorsinfluencethegenerationofnewtransactions.
+Effects of transaction frequency. First,weinvestigatetheeffectsoftemporalinformationbyconsideringfourkindsof
+walkingstrategiesaccordingtotransactiontimeinformation,asexplainedbelow:
+•WalkingstrategyWS 1:Inthisstrategy,theselectionprobabilityofthenexttransactionislinearlydependentonthe
+timeintervalbetweenthenexttransaction’stimestamp T(e)andthelargesttimestamp Tmaxofthecurrentnetwork.
+•WalkingstrategyWS 2:AsinWS 1,anearliertransactionhasahigherprobabilitytobeselected.However,WS 2
+strategy employs a descending rank functionη− which maps the timestamps of edges to positive integers of
+descendingorder.Theselectionprobabilityofthenextstepislinearlydependentonthe(descending)rankofthe
+timestamp η−(T(e)).
+•WalkingstrategyWS 3:Inthisstrategy,eachcandidatetransactionhasanidenticalprobabilitytobeselected.
+•WalkingstrategyWS 4:ThisstrategyistheoppositeofWS 2,andemploysanascendingrankfunction η+whichmaps
+thetimestampsofedgestopositiveintegersofascendingorder.Theselectionprobabilityofthenexttransactionis
+linearlydependentonthe(ascending)rankofthetimestamp η+(T(e)).
+Theessenceofthevariousstrategiesistoadjusttheeffectsofthetimeintervalbetweensuccessiveedgesonsampling
+randomwalkpaths,whichmayinfluencetheproximitybetweennodesinthegraph.WecanseefromTable1that,from
+WS1toWS4,therandomwalkstendtosamplethesuccessivetransactionswithlongertimeintervals.Fig.9(a)compares
+theperformanceoflinkpredictionunderdifferentwalkingstrategiesintermsofAUC.Thelinkpredictionalgorithmbased
+onWS1outperformstherest.
+Ontransactiontrackingofcryptocurrencies,wecaninferthatinanEthereumtransactionnetwork,thegenerationof
+newtransactionsisrelatedtothetimeelapsed,orfrequencyoftransactioninthereciprocalsense.Thus,newtransactions
+aremorelikelytotakeplacebetweennodepairswithmorefrequenttransactionsinthepath.Therefore,whentracking
+themoneyflowamongEthereumaccounts,weshouldpaymoreattentiontothosetransactionpathshavingashorter
+timeinterval.
+Effects of transaction amount. Next,weinvestigatetheeffectsofedgeweightinformation(i.e.,transactionamount)onthe
+linkpredictionexperiments.Consideringthetransactionamount,eachcandidateedge e ∈ Lt(vi)isassignedaselection
+probability PW(e)underdifferentwalkingstrategieswhosecalculationmethodsaregiveninTable2.Detailedexplanations
+areasfollows.
+•WalkingstrategyWS 5:Inthisstrategy,theprobabilityofselectingacandidateedgeisproportionaltoitsedgeweight,
+i.e.,thetransactionamount W(e).
+•WalkingstrategyWS 6:Inthisstrategy,anedgewithhigherweighthasahigherprobabilitytobechosen,andalinear
+mappingfunction(i.e.,rankingfunction)isadoptedtoweakentheimpactofedgeweightinformationcomparedwith
+WS5.Specifically,theselectionprobabilityofthenexttransactionislinearlydependenton η+(W(e)).
+•WalkingstrategyWS 7:Eachcandidatetransactionhasanidenticalprobabilitytobeselected.
+10
+
+=== PAGE 11 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Fig.10. LinkpredictionresultsintermsofAUCconsideringboththetransactiontimelapseandamount.
+FromWS 5toWS 7,theimpactofedgeweight(transactionamount)graduallyweakens.TheresultsgiveninFig.9(b)
+demonstratethatthelinkpredictionmodelbasedonWS 5attainsthebestperformance,implyingthatthelikelihoodof
+occurrenceofafuturetransactionispositivelyrelatedtothetransactionamountbetweentwoaccounts.Inmostcases,
+thetransactionswithlargervaluesinferthatthetwocorrespondingaccountshaveacloserrelationship.Thus,weshould
+paymoreattentiontothosetransactionpathshavingalargertransactionamount.
+Effect of time and amount. We combine both the temporal and weight factors, and investigate how they influence
+transactionevolution.Thecombinedinfluencecanberepresentedbythefollowingprobabilityofselectingedge e:
+P(e) = PT(e)αPW(e)(1−α)
+∑
+e′∈Lt(vi) PT(e′)αPW(e′)(1−α) (1)
+where αisatuningparametervaryingfrom0to1.Here α =0.5isthedefaultvalue,whichcorrespondstoabalanced
+temporalandweightinfluence.Notethat PT(e)denotestheselectingprobabilityforWS 1toWS4,and PW(e)denotesthe
+selectingprobabilityforWS 5toWS7.
+TheresultsofallpossiblecombinationsofwalkingstrategiesareshowninFig.10.Weobservethatthelinkprediction
+modeltendstoachievebetterperformancefrombottomtotop,andfromlefttoright.Moreover,whenthetransaction
+amountistakenintoaccount,especiallywithWS 5(therightmostcolumn),thedifferencebetweencombiningdifferent
+time-lapsestrategiesislessobvious.Theresultsfurtherverifythatboththe‘‘temporal’’and‘‘amount’’factorsimpact
+theEthereumtransactioninteraction,andimplythattheamountbeingtransferredhasagreaterinfluencethanthetime
+elapsedbetweentransactionsonthenetworkevolution.
+5. Transactiontrackingviasimilarity-basedlinkprediction(RQ2)
+AsexplainedinSection4.2,randomwalkbasedembeddingmethodscaneffectivelyembedalargesparsenetworkinto
+alowdimensionspacewhilepreservingthenodesimilarityproperty.However,comparingwithtraditionallinkprediction
+methods,theeffectivenessofourembeddingbasedframeworkontrackingtransactionsandnetworkevolutionisyetto
+beverified.Here,tostudythecompetitivenessofourembeddingbasedframework,weconductexperimentsofvarious
+similarity-basedlinkpredictionmethods.
+AspresentedinSection2.2,aspecificlinkpredictionmodelcorrespondstoanetworkevolutionmechanism.Usually,
+atraditionallinkpredictionmodelisaccompaniedwithanexplicitnode-similaritymeasurementfornodepairs,which
+indicateshowthenewconnectionsaregeneratedbetweenunconnectednodepairsinthenetwork.Givenalinkprediction
+method,wefirstcalculatethesimilarityvalueforeachunconnectednodepair.Itisassumedthatnodepairswithhigher
+similarityvaluesaremorelikelytogeneratenewlinksinthefuture.Thesimilarityindicescanbegroupedintothe
+node-dependentindicesandpath-dependentindices:
+11
+
+=== PAGE 12 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+•Node-dependentsimilarityindices
+–CommonNeighbors(CN)[34]ofnodes uand visdefinedas
+|Γ(u) ∩ Γ(v)| ,
+where Γ(u)and Γ(v)denotethesetofneighborsof uand v,respectively.Thelinkpredictionmethodbased
+onCNassumesthatnodes uand varemorelikelytobeconnectediftheyhavemorecommonneighbors.
+–JaccardCoefficient[46]ofnodes uand vis
+|Γ(u) ∩ Γ(v)|
+|Γ(u) ∪ Γ(v)| ,
+whichconsiderstheratioofcommonneighborsamongalltheneighborsratherthantheabsolutevalueof
+commonneighbors.
+–ResourceAllocationIndex(RA)[47]ofnodes uand visdefinedas
+∑
+w∈Γ(u)∩Γ(v)
+1
+|Γ(w)| ,
+whichisproposedfromtheresourceallocationperspective.Eachnodeisassumedtohaveaunitofresource
+beingdistributedequallytoitsneighbors.
+–Adamic–AdarIndex(AA)[48]ofnodes uand vis
+∑
+w∈Γ(u)∩Γ(v)
+1
+log |Γ(w)| .
+TheideaofAAisthatthecommonneighborswithlowerdegreecontributemorethanthosewithhigherdegree
+forlinkprediction.
+•Path-dependentsimilarityindices
+–LocalPathIndex(LP)[49]takesthethird-orderneighborhoodintoconsideration,exceptforCommonNeighbors
+(second-orderneighborhood).TheLPindexofnodes uand visdefinedas
+(A2 + ϵA3)uv,
+where Aistheadjacencymatrix, ϵistheparameterusedtocontroltheeffectofthethreeorderpathandhere
+weset ϵ =0.1.
+–KatzIndex[35]ofnodes uand vaggregatesallthepathsbetweenthem,assigningshorterpathswithsmaller
+weightsandlongerpathswithlargerweights.TheKatzIndexofnodes uand visdefinedasthe
+(βA + β2A2 + β3A3 + · · ·)uv
+where βisadampingfactorwhichissetas0.01inourexperiments.
+–RandomWalkwithRestartIndex(RWR)[50]ofnodes uand visdefinedas
+quv + qvu,
+where quvistheprobabilitythatarandomwalkerstartingfromnode ueventuallyreaches v.Let(1 − c)bethe
+probabilityoftherandomwalkerreturningtothepreviousnode,andlet Pbethetransitionmatrix.Then,we
+have ⃗qu(t +1) = cP T ⃗qu(t) +(1 − c) ⃗eu.Inourexperiments,weset c =0.1.
+–AverageCommuteTimeIndex(ACT)[51,52]assumesthattwonodes uand varemoresimilarifthevalueof
+ACTbetweenthemissmaller,andACTofnodes uand visdefinedas
+1
+L+
+uu + L+vv −2L+
+uv
+,
+where L+isthepseudo-inverseoftheLaplacematrixofthenetwork.
+Basedonthesimilarityindices,wetaketheunconnectednodepairswithhighersimilarityvaluesaspositivesamples,
+andevaluatetheperformancebyAUC.TheAUCresultsofdifferentsimilarityindicesareshowninTable3.Weseethat
+theperformancesofnode-dependentsimilarityindices,i.e.,CN,Jaccard,RAandAA,areverysimilaronthethreedatasets.
+Amongthepath-dependentsimilarityindices,LPshowscompetitiveperformanceindatasetEthereumG1,butperforms
+notsowellintheothertwodatasets.RWRandACTarememory-consumingfordatasetEthereumG3,whichindicatesthat
+RWRandACTarenotsuitableforlarge-scaletransactionnetworks.AsshowninTable3,theproposednetworkembedding
+(NE)basedmethodsoutperformtraditionallinkpredictionmethods,whichconfirmsthatnetworkembeddingmethods
+withflexiblewalkingstrategiesareabletolearnsimilaritybetweennodesmoreeffectively.Wethusconcludethatthe
+embeddingbasedframeworkiseffectivefortransactiontrackingoflarge-scaleEthereumnetworks.
+12
+
+=== PAGE 13 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Table3
+LinkpredictionresultsintermsofAUCforsimilarity-basedandproposednetworkembeddingbasedmethods.‘‘NE(uniform)’’denotestheproposed
+networkembeddingbasedmethodswithwalkingstrategiesWS 3+WS7,and‘‘NE(best)’’givesbestresultsamongcombinationsofwalkingstrategies.
+Dataset Areaundercurve(AUC)(%)
+CN[34] Jaccard[46] RA[47] AA[48] LP[49] Katz[35] RWR[50] ACT[51] NE(uniform) NE(best)
+EthereumG1 73.33 73.33 73.33 73.33 86.32 72.81 79.12 48.42 85.86 88.24
+EthereumG2 87.67 87.67 87.67 87.67 87.30 87.67 89.21 58.27 92.54 93.07
+EthereumG3 92.29 92.29 92.29 92.29 91.95 92.04 – – 92.60 93.84
+Table4
+PartofthelabeledaccountsreportedbyEtherscan.‘‘#’’denotes‘‘numberof’’,and‘‘TX’’denotes‘‘Transactions’’.
+Accounts Nametag #TX
+0x21f74c6bbc1e3ab9f0205e12de3a9daa14351aed Fake_Phishing702 1,619
+0x3cbd2e6143f057bd49ffb4c7058217a5900c35d3 Fake_Phishing311 1,587
+0x6aef2850c2ce2ef583ae8a36be3357080608bdc3 Fake_Phishing171 924
+0x1451dbe4304a60b5b25b4d98b355effd440417af Fake_Phishing186 694
+0x474057adf42f9f955e86aa1142740f9d7763e41e Fake_Phishing710 681
+0xb00548770ea87482f024cd4292a975fea72e8f01 Fake_Phishing235 644
+0x4bf722014e54aeab05fcf1519e6e4c0c3f742e43 Fake_Phishing250 621
+0x9ef89d10d8c77755bfe263903966eebb73f721e8 Fake_Phishing252 608
+0x39b6ce3428068ce97db218fd2f8df6909b331308 Fake_Phishing359 595
+0x4f00b95c625c6d6ef72748d78c750fd6c84a8b85 Fake_Phishing337 581
+6. Applicationoftransactiontracking(RQ3)
+AswehavementionedinSection1,criminalactivitiesonblockchainhavebecomemorefrequentandrampantin
+recentyears.AccordingtotheChainalysis2020CryptoCrimeReport, 8 2019wasthebiggestyearforcryptocurrency
+scams—Scammersbrought in4.3 billionUSD worthof cryptocurrencyfrom millionsof victims. Ether haslong been
+knownasthecryptocurrencyofchoiceforscams,andthephishingscamisoneofthemostcommontypesofEthereum
+scams.Usually,thetargetvictimsreceivephishers’emailorothercommunicationthattricksthemintosharingpersonal
+financialinformationthatallowsaccesstotheirEthereumwallets.Accordingtothereport, 9illegalrevenuefromphishing
+scammersexceed3millionUSDinjustonemonthintheearly2018.Theseshowsthatdetectingandtrackingphishing
+scamsisanurgentproblemintheEthereumecosystem.
+Cryptocurrencynetworksarecontinuouslygrowingovertime.IntheevolvinganddynamicEthereumtransaction
+network,thenetworkinformationwegetmaybeincomplete,whichmayresultinthelowaccuracyofillicitaccount
+detectiontaskinthecryptocurrencyworld.InSection4,wehavedemonstratedtheframeworkforEthereumtransaction
+trackingbasedonalinkpredictionmodel,andthegoodlinkpredictionmodelcanalsobeusedtodescribetheevolution
+mechanismofcomplexnetworks.Weassumethatwiththesupplementdatapredictedbyevolutionmechanismmodel,
+missinginformationcanbeaddedtodetectillicitactivitiesintheworkofcryptocurrency.Therefore,inthissection,we
+firstmodelthesuspiciousaccountsdetectionasabinaryclassificationproblemonthetransactionnetwork,andleverage
+F1-score as the evaluation criterion. Then we use the link-prediction based framework to improve the classification
+performance,bysupplementingtheunknownormissinginformationoftheEthereumtransactionnetwork.Weconduct
+experimentsontherealEthereumtransactiondatatoevaluatewhethertheapplicationoflinkpredictionmodelcan
+enhancetheperformanceofsuspiciousaccountdetection.
+Step1:Obtainthelocaltransactionnetworkoftargetaccounts. Weuse K-ordersamplingmethod[39]toobtain
+thetransactiondataof445phisheraccountslabeledinthe‘‘LabelWordCloud’’serviceprovidedbyEtherscan. 10Table4
+shows10oftheaccountstaggedasphishingscamsbyEtherscan.Besides,werandomlyselectunlabeledaccountsasthe
+negativesamplestotrainourclassificationmodelThetransactiondataof890targetaccountsaremodeledintoatemporal
+weightedmultidigraphwith86,622nodesand262,740edges.
+Thesamplingdepthofinwardandoutwardfromthecenteraccountaresetto Kin =1, Kout =3.Thereasonofthe
+different Kinand Kout isthecryptocurrencyflowcharacteristicofsuspiciousaccounts.Hereweshowanexampleofa
+typicaltransactionnetworkcenteredonaphishingaccount0xc440. 11Thedirectincomingtransactionsof0xc440isthe
+processofobtainingfundsfromvictims.Theoutgoingtransactionsfromaphishingaccountcanbeseenasthemoney
+launderingprocess,basedontheassumptionthatascammerhashardlyareasontotransferthefundstoanaccountthat
+hasnorelationshipwith,thustheoutgoingtransactionneighborhoodmayexistapotentialscamminggang.Oneofthe
+8 https://go.chainalysis.com/2020-Crypto-Crime-Report.html.
+9 https://go.chainalysis.com/2019-Crypto-Crime-Report.html.
+10 etherscan.io/accounts/label/phish-hack.
+11 0xc440015b2311b109949309a81624fb4dbadecdd0.
+13
+
+=== PAGE 14 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Table5
+TheF1-score(%)ofphishingaccountclassificationonthecollectedEthereumtransactionrecords.
+Testratio 50% 40% 30% 20% 10%
+F1-score 79.55 80.22 80.60 80.79 80.67
+Table6
+TheF1-score(%)ofphishingaccountclassificationbefore/afterrandomattack.Theratioofremovals θ%indicates
+howmanyedgesremovedfromthecurrentnetwork.
+Removals( θ%) Testratio
+50% 40% 30% 20% 10%
+10% 78.70 78.88 79.7 79.89 81.12
+20% 77.17 77.02 77.9 76.07 79.10
+30% 74.88 75.67 75.28 75.28 75.28
+40% 72.36 72.13 71.91 71.24 73.71
+outgoingneighborsofthephishingaccount0xc440is0x008c, 12whichisunlabeledinEtherscan,but0x008csendEther
+toaccount0x4985, 13whichislabeledas‘‘Fake_Phishing982’’inEtherscan.Anotherexampleisthatthephishingaccount
+0xc440transferredEthertoabridgeaccount0x5902, 14whichisalsounlabeled,buttheaccount0x5902furthertransfer
+EthertoaBinancewallet0x3f5c 15forcryptocurrencyexchange.Aboveall,tracingtheflowoffunds,theaccountsinthe
+pathfromthephishingaccountmaybesuspectedofbeingaccomplices,aslongastheendpointisanexchangewallet.
+Weset3astheoutwardsamplingdepthaccordingtothethresholdsettingofataintanalysisin[53].
+Step2:Accountfeaturelearningandsuspiciousaccountsdetection. Weobtainthelatentfeaturesofaccounts
+byanetworkembeddingmethodT-EDGE[54],mappingeachtargetaccounttoa128dimensionalfeaturevector.We
+randomlyselectpartsoftheaccountsasthetestset,andremaintherestasthetrainingset,respectively.Weclassifythe
+phisher/unlabeledaccountsbytrainingaSVMmodel,andreporttheF1-scoreinTable5.
+Step3:Randomattacksonthecurrenttransactionnetwork. TheincompletetopologicalinformationofEthereum
+networkmaydoharmtophishingaccountclassification.TheconcernisthattheblockchainexplorerEtherscandiscourages
+automatedcrawlersandtheprovidedAPIclaimsthatitcanonlydownloadthelast10,000transactions[55].Tosimulate
+thissituation,werandomlyremove θ%oftheedgesfromthetransactionnetwork,andthenrepeattheexperimentsin
+Step2.TheexperimentalresultsareshowninTable6andwecomparethemwiththeresultinTable5.Astheratioof
+removalsincreasedfrom0%to40%,theF1-scoreof50%testratioisdecreasingfrom79.55%to72.36%,andtheF1-scoreof
+10%testratioisdecreasingfrom80.67%to73.71%.Wecandrawaconclusionthattheincompletestructuralinformation
+resultsinapoorerperformanceofphishingaccountclassification.Inmostcases,networkswithlargerratioofremovals
+getslowerF1-score.
+Step 4: Link prediction on the incomplete transaction network.We conduct the experiment mentioned in
+Section4.3totrainatemporallinkpredictionmodel.AsmentionedinSection4.3,weuse50%ofthetransactionswith
+smallertimestampsfortemporallinkpredictiontraining.Thetemporallinkpredictionresultonthetestsetintermsof
+AUCis89%,withthenodeembeddingdimension d =128,thesizeofwindow k =4,thelengthofwalk l =10,andwalks
+pernode r =20fortherandom-walkbasedlinkprediction.Thenwerandomlysample Lunconnectedaccountpairsand
+predicttheirpositiveandnegativebasedonthetrainedtemporallinkpredictionmodel.Thepredictedpositivesamples
+areaddedtothecurrenttransactionnetwork,andwedenote posasthenumberofpredictedpositivelinks.Experiment
+resultsontheextendeddatasetareshowninTable7andwecomparethemwiththeresultinTable5.Itmakessensethat
+as Lgrowstenfold, posgrowsapproximatelytenfold.As Lincreasedfrom0to500,000,theF1-scoreof50%testratiois
+increasingfrom79.55%to84.31%,andtheF1-scoreof10%testratioisincreasingfrom80.67%to86.52%.Ourexperiments
+confirmthattransactiontrackingvialinkpredictioneffectivelyenhancestheabilitytodetectthesuspiciousaccountsin
+Ethereum.
+7. Conclusion
+Inthispaper,westudythetransactiontrackingprobleminEthereumfromanetworkscienceperspectiveandinferon
+theinterplaybetweentransactionfeaturesandnetworkevolution.Specifically,wepresentabiasedrandom-walkbased
+linkpredictionframeworktostudytransactiontracking.Toinvestigatetheimpactoftransactionfrequencyandamount
+ontheevolutionoftransactions,wedesignarandomwalkgeneratorwithvariouswalkingstrategiestoexaminethe
+temporalnetworkembeddingprocess.SimulationresultsonthreeEthereumtransactionnetworksrevealthattakingboth
+thetimelapsesbetweentransactionsandtheamountbeingtransferredintoconsideration,thelinkpredictioncanachieve
+12 0x008c61e96f6ac0042aef8eb14be5720414bf5df6.
+13 0x4985a8d068a9cac4b81faaafb8d4516ae46dd768.
+14 0x59027d7292ae7f48fb80f562a946d8115f98608e.
+15 0x3f5ce5fbfe3e9af3971dd833d26ba9b5c936f0be.
+14
+
+=== PAGE 15 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+Table7
+TheF1-score(%)ofphishingaccountclassificationafterlinkprediction. Listhenumberoflinksinthetestset
+forlinkprediction. |pos|isthenumberofpredictedpositivelinksaddedtothecurrenttransactionnetwork.
+L |pos| Testratio
+50% 40% 30% 20% 10%
+500 52 80.63 80.39 81.42 81.57 83.37
+5,000 429 80.90 81.07 81.72 81.12 81.57
+50,000 4 ,266 81.53 83.09 82.62 82.92 85.17
+500,000 41 ,970 84.31 83.37 84.34 83.37 86.52
+betterperformance.Moreover,bycomparingtheresultsofdifferentsamplingbiases,wecaninferthatintheEthereum
+transactionnetwork,occurrencesofnewtransactionsarerelatedtothefrequencyandamountofprevioustransactions.
+Inparticular,newtransactionsaremorelikelytooccurbetweenaccountpairswhohavecommonneighborswithhigher
+transactionfrequencyandamount.Ourembeddingbasedframeworkisalsofoundtobemoreeffectivethantraditional
+methodsoflinkpredictionandtransactiontracking.Inaddition,weusethelink-predictionbasedtransactiontracking
+techniquetoimprovethephishingclassificationperformancebysupplementingtheunknownormissinginformationof
+Ethereumtransactionnetwork,whichfurtherverifyhowtransactiontrackingcanhelptracetransactionsandidentify
+frauds.
+It is thus valuable to further explore the evolution mechanisms of different cryptocurrencies, and identify the
+similaritiesanddifferencesinthesemechanisms,whicharerelevanttocross-platformtransactiontracking.Ourfuture
+workwillincludeinvestigationoftheinfluenceofotheraccountfeaturesontheevolutionmechanismbyrefiningthe
+linkpredictionmodel.
+CRediTauthorshipcontributionstatement
+DanLin: Conceptualization,Methodology,Investigation,Datacuration,Writing–originaldraft. JiajingWu: Writing–
+review&editing,Supervision,Fundingacquisition. QiXuan: Writing–review&editing. ChiK.Tse: Writing–review&
+editing.
+Declarationofcompetinginterest
+Theauthorsdeclarethattheyhavenoknowncompetingfinancialinterestsorpersonalrelationshipsthatcouldhave
+appearedtoinfluencetheworkreportedinthispaper.
+Acknowledgments
+The work was supported by the National Natural Science Foundation of China (61973325), the Natural Science
+Foundations of Guangdong Province (2021A1515011661), and Guangzhou Basic and Applied Basic Research Project
+(202102020616).
+References
+[1] M.Swan,Blockchain:BlueprintforaNewEconomy,O’ReillyMedia,Inc.,Cambridge,Massachusetts,2015.
+[2] S.Wang,L.Ouyang,Y.Yuan,X.Ni,X.Han,F.Wang,Blockchain-enabledsmartcontracts:Architecture,applications,andfuturetrends,IEEE
+Trans.Syst.ManCybern.:Syst.49(11)(2019)2266–2277.
+[3] T. Huang, D. Lin, J. Wu, Ethereum account classification based on graph convolutional network, IEEE Trans. Circ. Syst. II, Exp. Briefs (2022)
+http://dx.doi.org/10.1109/TCSII.2022.3161112,tobepublished.
+[4] Y. Xia, J. Liu, J. Wu, Phishing detection on ethereum via attributed ego-graph embedding, IEEE Trans. Circ. Syst. II, Exp. Briefs (2022)
+http://dx.doi.org/10.1109/TCSII.2022.3159594,tobepublished.
+[5] J.Chen,D.Lin,J.Wu,Docryptocurrencyexchangesfaketradingvolumes?Anempiricalanalysisofwashtradingbasedondatamining,Phys.
+AStat.Mech.ItsAppl.586(2022)126405.
+[6] J.Wu,J.Liu,Y.Zhao,Z.Zheng,Analysisofcryptocurrencytransactionsfromanetworkperspective:Anoverview,J.Netw.Comput.Appl.190
+(2021)103139.
+[7] D.Lin,J.Chen,J.Wu,Z.Zheng,Evolutionofethereumtransactionrelationships:Towardunderstandingglobaldrivingfactorsfrommicroscopic
+patterns,IEEETrans.Comput.Soc.Syst.(2021)http://dx.doi.org/10.1109/TCSS.2021.3093384,tobepublished.
+[8] J.Mišić,V.B.Mišić,X.Chang,S.G.Motlagh,M.Z.Ali,Modelingofbitcoin’sblockchaindeliverynetwork,IEEETrans.Netw.Sci.Eng.7(3)(2020)
+1368–1381.
+[9] S.G.Motlagh,J.Mišić,V.B.Mišić,Impactofnodechurninthebitcoinnetwork,IEEETrans.Netw.Sci.Eng.7(3)(2020)2104–2113.
+[10] C.Chen,X.Chen,J.Yu,W.Wu,D.Wu,Impactoftemporaryforkontheevolutionofminingpoolsinblockchainnetworks:Anevolutionary
+gameanalysis,IEEETrans.Netw.Sci.Eng.(2020)http://dx.doi.org/10.1109/TNSE.2020.3038943.
+[11] J. Crowcroft, D. Di Francesco Maesa, A. Magrini, A. Marino, L. Ricci, Leveraging the users graph and trustful transactions for the analysis of
+bitcoinprice,IEEETrans.Netw.Sci.Eng.(2020)http://dx.doi.org/10.1109/TNSE.2020.3008600.
+[12] J.Wu,J.Liu,W.Chen,H.Huang,Z.Zheng,Y.Zhang,Detectingmixingservicesviaminingbitcointransactionnetworkwithhybridmotifs,IEEE
+Trans.Syst.Man,Cybern.Syst.52(4)(2022)2237–2249.
+15
+
+=== PAGE 16 ===
+D. Lin, J. Wu, Q. Xuan et al. Physica A 600 (2022) 127504
+[13] A.ElBahrawy,L.Alessandretti,L.Rusnac,D.Goldsmith,A.Teytelboym,A.Baronchelli,Collectivedynamicsofdarkwebmarketplaces,2019,
+arXivpreprintarXiv:1911.09536.
+[14] W.Chen,Z.Zheng,J.Cui,E.Ngai,P.Zheng,Y.Zhou,Detectingponzischemesonethereum:Towardshealthierblockchaintechnology,in:Proc.
+ACMWorldWideWebConf.,Lyon,France,2018,pp.1409–1418.
+[15] P.H. O’Neill, The Curious Case of the Missing Mt. Gox Bitcoin Fortune, Cyberscoop, 2017, https://www.cyberscoop.com/bitcoin-mt-gox-
+chainalysis-elliptic/.
+[16] Y.Huang,J.Wu,W.Ren,C.K.Tse,Z.Zheng,Sequentialrestorationsofcomplexnetworksaftercascadingfailures,IEEETrans.Syst.ManCybern.:
+Syst.51(1)(2021)400–411.
+[17] S.Meiklejohn,M.Pomarole,G.Jordan,K.Levchenko,D.McCoy,G.M.Voelker,S.Savage,Afistfulofbitcoins:Characterizingpaymentsamong
+menwithnonames,in:Proc.InternetMeas.Conf.,ACM,Barcelona,Spain,2013,pp.127–140.
+[18] H. Yousaf, G. Kappos, S. Meiklejohn, Tracing transactions across cryptocurrency ledgers, in: Proc. USENIX Secur. Symp., USENIX Association,
+SantaClara,CA,2019,pp.837–850.
+[19] Z. Wu, J. Liu, J. Wu, Z. Zheng, Transaction tracking on blockchain trading systems using personalized pagerank, 2022, arXiv preprint
+arXiv:2201.05757.
+[20] R.Dorit,A.Shamir,Quantitativeanalysisofthefullbitcointransactiongraph,in:Proc.Int.Conf.Financ.Crypt.DataSecurity,Okinawa,Japan,
+2013,pp.6–24.
+[21] T.Chen,Y.Zhu,Z.Li,J.Chen,X.Li,X.Luo,X.Lin,X.Zhang,Understandingethereumviagraphanalysis,in:Proc.IEEEConf.Comp.Comm.,
+Honolulu,USA,2018,pp.1484–1492.
+[22] J.Liang,L.Li,D.Zeng,Evolutionarydynamicsofcryptocurrencytransactionnetworks:Anempiricalstudy,PLoSONE13(8)(2018)1–18.
+[23] S.Ferretti,G.D’Angelo,Ontheethereumblockchainstructure:Acomplexnetworkstheoryperspective,Concurr.Comput.Pract.Exp.32(12)
+(2019)e5493.
+[24] D.Guo,J.Dong,K.Wang,Graphstructureandstatisticalpropertiesofethereumtransactionrelationships,Inform.Sci.492(2019)58–71.
+[25] I.Alqassem,I.Rahwan,D.Svetinovic,Theanti-socialsystemproperties:Bitcoinnetworkdataanalysis,IEEETrans.Syst.ManCybern.:Syst.50
+(1)(2020)21–31.
+[26] T.H.Chang,D.Svetinovic,Improvingbitcoinownershipidentificationusingtransactionpatternsanalysis,IEEETrans.Syst.ManCybern.:Syst.
+50(1)(2020)9–20.
+[27] J. Liang, L. Li, D. Zeng, Targeted addresses identification for bitcoin with network representation learning, in: Proc. IEEE Int. Conf. Intellig.
+SecurityInform.,Shenzhen,China,2019,pp.158–160.
+[28] M.Weber,G.Domeniconi,J.Chen,D.K.I.Weidele,C.Bellei,T.Robinson,C.E.Leiserson,Anti-moneylaunderinginbitcoin:Experimentingwith
+graphconvolutionalnetworksforfinancialforensics,2019,arXivpreprintarXiv:1908.02591.
+[29] A.L.Barabási,NetworkScience,CambridgeUniversityPress,2016.
+[30] P.Erdős,A.Rényi,Ontheevolutionofrandomgraphs,Publ.Math.Inst.Hung.Acad.Sci.5(1)(1960)17–60.
+[31] D.J.Watts,S.H.Strogatz,Collectivedynamicsofsmallworldnetworks,Nature393(6684)(1998)440–442.
+[32] A.L.Barabási,R.Albert,Emergenceofscalinginrandomnetworks,Science286(5439)(1999)509–512.
+[33] A. Kumar, S.S. Singh, K. Singh, B. Biswas, Link prediction techniques, applications, and performance: A survey, Physica A: Stat. Mech. Appl.
+(2020)124289.
+[34] M.E.Newman,Clusteringandpreferentialattachmentingrowingnetworks,Phys.Rev.E64(2)(2001)025102.
+[35] L.Katz,Anewstatusindexderivedfromsociometricanalysis,Psychometrika18(1)(1953)39–43.
+[36] C.Wang,V.Satuluri,S.Parthasarathy,Localprobabilisticmodelsforlinkprediction,in:Proc.IEEEInt.Conf.DataMining,2007,pp.322–331.
+[37] A.Grover,J.Leskovec,Node2vec:Scalablefeaturelearningfornetworks,in:Proc.InternationalConferenceonKnowledgeDiscoveryandData
+Mining,ACM,NewYork,USA,2016,pp.855–864.
+[38] H.Liu,L.Lü,T.Zhou,Uncoveringthenetworkevolutionmechanismbylinkprediction,Sci.SinicaPhys.,Mech.Astron.41(7)(2011)816–823.
+[39] D.Lin,J.Wu,Q.Yuan,Z.Zheng,Modelingandunderstandingethereumtransactionrecordsviaacomplexnetworkapproach,IEEETrans.Circ.
+Syst.II,Exp.Briefs67(11)(2020)2737–2741.
+[40] D.Zhang,J.Yin,X.Zhu,C.Zhang,Networkrepresentationlearning:Asurvey,IEEETrans.BigData6(1)(2020)3–28.
+[41] H.Cai,V.W.Zheng,K.C.C.Chang,Acomprehensivesurveyofgraphembedding:problems,techniquesandapplications,IEEETrans.Knowl.Data
+Eng.30(9)(2018)1616–1637.
+[42] B.Perozzi,R.Al-Rfou,S.Skiena,Deepwalk:Onlinelearningofsocialrepresentations,in:Proc.ACMInt.Conf.Know.Discov.DataMining,New
+York,USA,2014,pp.701–710.
+[43] G.H.Nguyen,J.B.Lee,R.A.Rossi,N.K.Ahmed,E.Koh,S.Kim,Continuous-timedynamicnetworkembeddings,in:Proc.ACMtheWebConf.,
+Lyon,France,2018,pp.969–976.
+[44] T.Mikolov,K.Chen,G.Corrado,J.Dean,Efficientestimationofwordrepresentationsinvectorspace,2013,arXivpreprintarXiv:1301.3781.
+[45] T.Mikolov,I.Sutskever,K.Chen,G.S.Corrado,J.Dean,Distributedrepresentationsofwordsandphrasesandtheircompositionality,in:Proc.
+Adv.NeuralInform.Proc.Syst.,LakeTahoe,Nevada,USA,2013,pp.3111–3119.
+[46] P.Jaccard,ÉtudeComparativedeladistributionfloraledansuneportiondesalpesetdesjura,Bull.SociétéVaudoiseSci.Naturelles37(1901)
+547–579.
+[47] T.Zhou,L.Lü,Y.-C.Zhang,Predictingmissinglinksvialocalinformation,Eur.Phys.J.B71(4)(2009)623–630.
+[48] L.A.Adamic,E.Adar,Friendsandneighborsontheweb,Soc.Netw.25(3)(2003)211–230.
+[49] L.Lü,C.H.Jin,T.Zhou,Similarityindexbasedonlocalpathsforlinkpredictionofcomplexnetworks,Phys.Rev.E80(2009)046122.
+[50] H. Tong, C. Faloutsos, J. Pan, Fast random walk with restart and its applications, in: Proc. Int. Conf. Data Mining, Hong Kong, China, 2006
+pp.613–622.
+[51] F.Göbel,A.Jagers,Randomwalksongraphs,StochasticProcess.Appl.2(4)(1974)311–336.
+[52] W.Liu,L.Lü,Linkpredictionbasedonlocalrandomwalk,Europhys.Lett.89(5)(2010)58007.
+[53] Z.Cheng,X.Hou,R.Li,Y.Zhou,X.Luo,J.Li,K.Ren,Towardsafirststeptounderstandthecryptocurrencystealingattackonethereum,in:
+22ndInternationalSymposiumonResearchinAttacks,IntrusionsandDefenses,USENIXAssociation,Beijing,China,2019,pp.47–60.
+[54] D.Lin,J.Wu,Q.Yuan,Z.Zheng,T-EDGE:Temporalweightedmultidigraphembeddingforethereumtransactionnetworkanalysis,Front.Phys.
+8(2020)204.
+[55] T.Hu,X.Liu,T.Chen,X.Zhang,X.Huang,Transaction-basedclassificationanddetectionapproachforethereumsmartcontract,Inform.Process.
+Manag.58(2)(2021)102462.
+16

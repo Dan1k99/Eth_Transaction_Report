@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T-EDGE Temporal Graph & Random Walk Visualizer</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Vis.js CDN -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    :root {
+      --bg-dark: #0b0d19;
+      --bg-card: rgba(22, 26, 52, 0.45);
+      --bg-card-hover: rgba(30, 36, 72, 0.65);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-color-focus: rgba(0, 242, 254, 0.4);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #00f2fe; /* Cyan */
+      --secondary: #ff007f; /* Magenta */
+      --accent: #ffb703; /* Neon Yellow/Gold for Walk highlight */
+      --success: #10b981;
+      --danger: #ef4444;
+      --card-blur: blur(16px);
+      --transition-speed: 0.25s;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(at 10% 20%, rgba(0, 242, 254, 0.08) 0px, transparent 50%),
+        radial-gradient(at 90% 80%, rgba(255, 0, 127, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Glass Panels */
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: var(--card-blur);
+      -webkit-backdrop-filter: var(--card-blur);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      transition: border-color var(--transition-speed), background var(--transition-speed);
+    }
+
+    /* Header */
+    header {
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      background: rgba(11, 13, 25, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-glow {
+      width: 10px;
+      height: 10px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      box-shadow: 0 0 15px 4px var(--primary);
+      animation: pulse 2s infinite;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(to right, #ffffff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .dataset-selector-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    label.select-lbl {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    select, input[type="text"], input[type="number"] {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 12px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 0.9rem;
+      transition: all var(--transition-speed);
+    }
+
+    select:focus, input[type="text"]:focus, input[type="number"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 8px rgba(0, 242, 254, 0.25);
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-loading {
+      background: rgba(0, 242, 254, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+    }
+
+    /* Main Grid Layout */
+    .dashboard-container {
+      display: grid;
+      grid-template-columns: 320px 1fr 340px;
+      gap: 16px;
+      padding: 16px;
+      flex: 1;
+      height: calc(100vh - 75px);
+      min-height: 500px;
+    }
+
+    /* Column Styles */
+    .sidebar-left, .sidebar-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .canvas-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 100%;
+    }
+
+    /* Card Layouts */
+    .panel-card {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-card-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 8px;
+    }
+
+    .panel-card-title i {
+      color: var(--primary);
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Info Items */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .info-item {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .info-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .info-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .form-label span.value-bubble {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 99px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--primary);
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Strategy Presets */
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 6px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all var(--transition-speed);
+    }
+
+    .preset-btn:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .preset-btn.active {
+      border-color: var(--primary);
+      background: rgba(0, 242, 254, 0.08);
+      color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.15);
+    }
+
+    /* Typology Weights Grid */
+    .typo-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .typo-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .typo-lbl {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Action Buttons */
+    .btn {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all var(--transition-speed);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary) 0%, #00b4fe 100%);
+      color: #0b0d19;
+      box-shadow: 0 4px 14px rgba(0, 242, 254, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Search Container */
+    .search-container {
+      display: flex;
+      gap: 6px;
+    }
+
+    .search-container input {
+      flex: 1;
+    }
+
+    .suggestions-list {
+      background: rgba(11, 13, 25, 0.95);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      position: absolute;
+      width: calc(100% - 36px);
+      z-index: 60;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+
+    .suggestion-item {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .suggestion-item:hover {
+      background: rgba(255,255,255,0.05);
+      color: var(--primary);
+    }
+
+    /* Vis Network Canvas */
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #network-canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .canvas-legend {
+      background: rgba(11, 13, 25, 0.85);
+      backdrop-filter: blur(8px);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      gap: 16px;
+      font-size: 0.75rem;
+      pointer-events: auto;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    .legend-node-eoa {
+      background: #4f46e5;
+      border: 1.5px solid #818cf8;
+      border-radius: 50%;
+    }
+
+    .legend-node-contract {
+      background: var(--secondary);
+      border: 1.5px solid #ff79c6;
+      border-radius: 3px;
+    }
+
+    .legend-edge-success {
+      height: 3px;
+      width: 20px;
+      background: rgba(0, 242, 254, 0.5);
+    }
+
+    .legend-edge-failed {
+      height: 3px;
+      width: 20px;
+      border-top: 2px dashed var(--danger);
+    }
+
+    .legend-walk-active {
+      height: 4px;
+      width: 20px;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    /* Playback Console overlay */
+    .playback-console {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(11, 13, 25, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      pointer-events: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      width: 90%;
+      max-width: 600px;
+    }
+
+    .play-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: none;
+      color: #0b0d19;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+      transition: all 0.2s;
+    }
+
+    .play-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+    }
+
+    .playback-nav-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .playback-nav-btn:hover {
+      color: var(--text-main);
+    }
+
+    .timeline-slider-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .playback-status-text {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      min-width: 70px;
+      text-align: right;
+    }
+
+    /* Right Sidebar timeline components */
+    .walk-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      flex: 1;
+      max-height: 320px;
+      padding-right: 4px;
+    }
+
+    .timeline-step {
+      background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.02);
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      position: relative;
+    }
+
+    .timeline-step:hover {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .timeline-step.active {
+      border-color: var(--accent);
+      background: rgba(255, 183, 3, 0.05);
+      box-shadow: 0 0 10px rgba(255, 183, 3, 0.1);
+    }
+
+    .timeline-step.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--accent);
+      border-radius: 10px 0 0 10px;
+    }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      margin-bottom: 6px;
+    }
+
+    .step-number {
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .step-node-id {
+      font-weight: 600;
+      color: var(--text-main);
+      font-size: 0.85rem;
+    }
+
+    .step-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .step-badge {
+      font-size: 0.65rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .step-badge-eoa {
+      background: rgba(79, 70, 229, 0.2);
+      color: #818cf8;
+    }
+
+    .step-badge-contract {
+      background: rgba(255, 0, 127, 0.2);
+      color: #ff79c6;
+    }
+
+    /* Decision Trace Panel */
+    .decision-trace-panel {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 250px;
+    }
+
+    .decision-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .decision-item {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.03);
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: border-color var(--transition-speed);
+    }
+
+    .decision-item.selected {
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .decision-item-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+
+    .decision-item-prob-bar {
+      height: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .decision-item-prob-fill {
+      height: 100%;
+      background: var(--primary);
+    }
+
+    .decision-item.selected .decision-item-prob-fill {
+      background: var(--success);
+    }
+
+    .decision-stats-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+      font-size: 0.7rem;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(11, 13, 25, 0.85);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      border-radius: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 242, 254, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s linear infinite;
+    }
+
+    .physics-toggle {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      pointer-events: auto;
+    }
+
+    .physics-toggle button {
+      background: rgba(11, 13, 25, 0.85);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .physics-toggle button.active {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 10px 2px var(--primary); }
+      50% { box-shadow: 0 0 20px 6px var(--primary); }
+      100% { box-shadow: 0 0 10px 2px var(--primary); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand">
+      <div class="logo-glow"></div>
+      <h1>T-EDGE Temporal Walk Visualizer</h1>
+      <span class="badge badge-success" id="connection-status"><i data-lucide="radio" style="width:12px;height:12px"></i>Connected</span>
+    </div>
+    
+    <div class="header-actions">
+      <div class="dataset-selector-wrapper">
+        <label class="select-lbl" for="dataset-select">Active Dataset:</label>
+        <select id="dataset-select" onchange="onDatasetChange()">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Container -->
+  <div class="dashboard-container">
+    
+    <!-- LEFT SIDEBAR: Graph & Walk Configurations -->
+    <div class="sidebar-left">
+      
+      <!-- Graph Metadata / Load Info -->
+      <div class="glass-panel panel-card">
+        <div class="panel-card-title">
+          <i data-lucide="database"></i>
+          <span>Dataset Properties</span>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Total Nodes</div>
+            <div class="info-value" id="stats-nodes">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Total Transactions</div>
+            <div class="info-value" id="stats-edges">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Contract Nodes</div>
+            <div class="info-value" id="stats-contracts" style="color:var(--secondary)">-</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">EOA Nodes</div>
+            <div class="info-value" id="stats-eoa" style="color:#818cf8">-</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Graph Sampling Control -->
+      <div class="glass-panel panel-card">
+        <div class="panel-card-title">
+          <i data-lucide="zoom-in"></i>
+          <span>Subgraph View</span>
+        </div>
+        <div class="form-group" style="position: relative;">
+          <label class="form-label" for="center-node-input">Center Node ID</label>
+          <div class="search-container">
+            <input type="text" id="center-node-input" placeholder="Type Node ID... (e.g., 556)" oninput="onNodeSearchInput()">
+            <button class="btn btn-secondary" style="padding: 0 10px;" onclick="loadSubGraphCenter()"><i data-lucide="eye" style="width:16px;"></i></button>
+          </div>
+          <div class="suggestions-list" id="search-suggestions"></div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">
+            <span>Max Nodes to Render</span>
+            <span class="value-bubble" id="max-nodes-val">80</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="max-nodes-slider" min="30" max="250" value="80" oninput="document.getElementById('max-nodes-val').innerText = this.value">
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="loadSubGraphGlobal()">
+          <i data-lucide="refresh-cw" style="width:16px;"></i>
+          Load Global Subgraph
+        </button>
+      </div>
+      
+      <!-- Random Walk Parameters -->
+      <div class="glass-panel panel-card" style="flex: 1;">
+        <div class="panel-card-title" style="margin-bottom:10px;">
+          <i data-lucide="git-branch"></i>
+          <span>Walk Parameterization</span>
+        </div>
+        
+        <!-- Preset strategies from the T-EDGE paper -->
+        <label class="form-label" style="margin-bottom:4px;">Strategy Presets</label>
+        <div class="presets-grid">
+          <button class="preset-btn active" id="preset-baseline" onclick="applyPreset('baseline')">Baseline Walk</button>
+          <button class="preset-btn" id="preset-penalty" onclick="applyPreset('penalty')">State Penalty</button>
+          <button class="preset-btn" id="preset-typology" onclick="applyPreset('typology')">Node Typology</button>
+          <button class="preset-btn" id="preset-friction" onclick="applyPreset('friction')">Friction Inverse</button>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="start-node-input">Walk Start Node</label>
+          <input type="text" id="start-node-input" placeholder="Click node in graph or type ID...">
+        </div>
+        
+        <div class="form-group">
+          <div class="form-label">
+            <span>Walk Length</span>
+            <span class="value-bubble" id="walk-len-val">15</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="walk-len-slider" min="5" max="50" value="15" oninput="document.getElementById('walk-len-val').innerText = this.value">
+          </div>
+        </div>
+        
+        <!-- Interactive sliders -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Alpha (Time weight vs. Amount)</span>
+            <span class="value-bubble" id="alpha-val">0.5</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="alpha-slider" min="0" max="1" step="0.05" value="0.5" oninput="document.getElementById('alpha-val').innerText = this.value">
+          </div>
+        </div>
+
+        <div class="form-group" id="gamma-group" style="display: none;">
+          <div class="form-label">
+            <span>Gamma (Friction gas weight)</span>
+            <span class="value-bubble" id="gamma-val">0.2</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="gamma-slider" min="0" max="0.5" step="0.05" value="0.2" oninput="document.getElementById('gamma-val').innerText = this.value">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="form-label">
+            <span>Failed Transaction Penalty</span>
+            <span class="value-bubble" id="penalty-val">1.0</span>
+          </div>
+          <div class="slider-container">
+            <input type="range" id="penalty-slider" min="0" max="1" step="0.1" value="1.0" oninput="document.getElementById('penalty-val').innerText = this.value">
+          </div>
+        </div>
+        
+        <!-- Typology weights inputs -->
+        <div class="form-group">
+          <label class="form-label">Typology Hop Weights</label>
+          <div class="typo-grid">
+            <div class="typo-input-group">
+              <span class="typo-lbl">EOA &rarr; EOA</span>
+              <input type="number" id="typo-ee" value="1.0" step="0.1" style="padding: 4px 8px; font-size: 0.8rem;">
+            </div>
+            <div class="typo-input-group">
+              <span class="typo-lbl">EOA &rarr; Contract</span>
+              <input type="number" id="typo-ec" value="1.0" step="0.1" style="padding: 4px 8px; font-size: 0.8rem;">
+            </div>
+            <div class="typo-input-group">
+              <span class="typo-lbl">Contract &rarr; EOA</span>
+              <input type="number" id="typo-ce" value="1.0" step="0.1" style="padding: 4px 8px; font-size: 0.8rem;">
+            </div>
+            <div class="typo-input-group">
+              <span class="typo-lbl">Contract &rarr; Contract</span>
+              <input type="number" id="typo-cc" value="1.0" step="0.1" style="padding: 4px 8px; font-size: 0.8rem;">
+            </div>
+          </div>
+        </div>
+        
+        <button class="btn btn-primary" onclick="simulateWalk()" style="margin-top: auto;">
+          <i data-lucide="play-circle" style="width:18px;"></i>
+          Generate Walks
+        </button>
+      </div>
+      
+    </div>
+    
+    <!-- CENTER PANEL: Vis Network Canvas & Legends -->
+    <div class="canvas-column">
+      <div class="glass-panel canvas-container">
+        
+        <!-- Vis Network target -->
+        <div id="network-canvas"></div>
+        
+        <!-- Floating Legends -->
+        <div class="canvas-overlay">
+          <div class="canvas-legend">
+            <div class="legend-item">
+              <div class="legend-color legend-node-eoa"></div>
+              <span>EOA Node</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color legend-node-contract"></div>
+              <span>Contract Node</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color legend-edge-success"></div>
+              <span>Successful Tx</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color legend-edge-failed"></div>
+              <span>Failed Tx</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color legend-walk-active"></div>
+              <span>Walk Path</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Physics toggle -->
+        <div class="physics-toggle">
+          <button id="physics-btn" class="active" onclick="togglePhysics()">
+            <i data-lucide="zap" style="width:14px;height:14px"></i>
+            Physics On
+          </button>
+        </div>
+        
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="canvas-loader">
+          <div class="spinner"></div>
+          <span style="font-weight:600;font-size:0.95rem;letter-spacing:0.5px;" id="loader-text">Loading Subgraph...</span>
+        </div>
+        
+        <!-- Floating Walk Playback console -->
+        <div class="playback-console" id="playback-panel" style="display: none;">
+          <button class="playback-nav-btn" onclick="prevStep()"><i data-lucide="skip-back" style="width:20px;height:20px;"></i></button>
+          <button class="play-btn" id="play-pause-btn" onclick="togglePlay()"><i data-lucide="play" style="fill: currentColor; width:20px;height:20px;"></i></button>
+          <button class="playback-nav-btn" onclick="nextStep()"><i data-lucide="skip-forward" style="width:20px;height:20px;"></i></button>
+          
+          <div class="timeline-slider-wrapper">
+            <input type="range" id="timeline-slider" min="0" max="10" value="0" oninput="jumpToStep(this.value)">
+          </div>
+          
+          <div class="playback-status-text" id="playback-status">Step 0 / 0</div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- RIGHT SIDEBAR: Step Timeline Logs & Prob Decision Trace -->
+    <div class="sidebar-right">
+      
+      <!-- Walk timeline trace -->
+      <div class="glass-panel panel-card" style="max-height: 480px; flex: 1.5;">
+        <div class="panel-card-title">
+          <i data-lucide="activity"></i>
+          <span>Temporal Walk Timeline</span>
+        </div>
+        <div class="walk-timeline" id="timeline-container">
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 40px 10px;">
+            <i data-lucide="alert-circle" style="width:24px;height:24px;margin-bottom:8px;color:var(--text-muted);opacity:0.6;"></i>
+            <p>No walk simulated yet. Click "Generate Walks" to start.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Decision component breakdown -->
+      <div class="glass-panel panel-card" style="max-height: 380px; flex: 1;">
+        <div class="panel-card-title">
+          <i data-lucide="sliders"></i>
+          <span>Transition Candidates</span>
+        </div>
+        <div class="decision-trace-panel">
+          <div id="decision-container">
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 30px 10px;">
+              Select an active step in the timeline to trace transition probabilities.
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+  </div>
+
+  <script>
+    // Global State variables
+    let API_BASE = "http://localhost:8050";
+    let network = null;
+    let nodesDataset = null;
+    let edgesDataset = null;
+    let currentWalkSteps = [];
+    let currentStepIndex = -1;
+    let isPlaying = false;
+    let playbackInterval = null;
+    let playbackSpeed = 1500; // ms per step
+    let selectedPreset = 'baseline';
+    let physicsEnabled = true;
+
+    // Presets configuration
+    const presets = {
+      baseline: {
+        time_biased_type: 'time_close_exp',
+        amount_biased: 'amount_exp',
+        gas_biased: 'none',
+        alpha: 0.5,
+        gamma: 0.0,
+        state_penalty: 1.0,
+        typo_ee: 1.0, typo_ec: 1.0, typo_ce: 1.0, typo_cc: 1.0
+      },
+      penalty: {
+        time_biased_type: 'time_close_exp',
+        amount_biased: 'amount_exp',
+        gas_biased: 'none',
+        alpha: 0.5,
+        gamma: 0.0,
+        state_penalty: 0.2,
+        typo_ee: 1.0, typo_ec: 1.0, typo_ce: 1.0, typo_cc: 1.0
+      },
+      typology: {
+        time_biased_type: 'time_close_exp',
+        amount_biased: 'amount_exp',
+        gas_biased: 'none',
+        alpha: 0.5,
+        gamma: 0.0,
+        state_penalty: 0.2,
+        typo_ee: 1.0, typo_ec: 1.5, typo_ce: 1.2, typo_cc: 0.8
+      },
+      friction: {
+        time_biased_type: 'time_close_exp',
+        amount_biased: 'amount_exp',
+        gas_biased: 'friction_inverse',
+        alpha: 0.4,
+        gamma: 0.2,
+        state_penalty: 0.2,
+        typo_ee: 1.0, typo_ec: 1.0, typo_ce: 1.0, typo_cc: 1.0
+      }
+    };
+
+    // Initialize UI on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+      fetchDatasets();
+      
+      // Auto-load default preset
+      applyPreset('baseline');
+    });
+
+    // Toggle physics on network canvas
+    function togglePhysics() {
+      physicsEnabled = !physicsEnabled;
+      const btn = document.getElementById("physics-btn");
+      if (physicsEnabled) {
+        btn.classList.add("active");
+        btn.innerHTML = `<i data-lucide="zap" style="width:14px;height:14px"></i> Physics On`;
+        network.setOptions({ physics: { enabled: true } });
+      } else {
+        btn.classList.remove("active");
+        btn.innerHTML = `<i data-lucide="zap-off" style="width:14px;height:14px"></i> Physics Off`;
+        network.setOptions({ physics: { enabled: false } });
+      }
+      lucide.createIcons();
+    }
+
+    // Apply Presets to UI Controls
+    function applyPreset(name) {
+      selectedPreset = name;
+      
+      // Toggle button class
+      document.querySelectorAll(".preset-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById(`preset-${name}`).classList.add("active");
+
+      const config = presets[name];
+      
+      // Set sliders
+      document.getElementById("alpha-slider").value = config.alpha;
+      document.getElementById("alpha-val").innerText = config.alpha;
+      
+      document.getElementById("gamma-slider").value = config.gamma;
+      document.getElementById("gamma-val").innerText = config.gamma;
+      
+      document.getElementById("penalty-slider").value = config.state_penalty;
+      document.getElementById("penalty-val").innerText = config.state_penalty;
+      
+      // Show/Hide Gamma slider (only for friction gas preset)
+      const gammaGroup = document.getElementById("gamma-group");
+      if (config.gas_biased === 'friction_inverse') {
+        gammaGroup.style.display = 'block';
+      } else {
+        gammaGroup.style.display = 'none';
+      }
+      
+      // Set typology weights inputs
+      document.getElementById("typo-ee").value = config.typo_ee;
+      document.getElementById("typo-ec").value = config.typo_ec;
+      document.getElementById("typo-ce").value = config.typo_ce;
+      document.getElementById("typo-cc").value = config.typo_cc;
+    }
+
+    // Fetch Datasets from API
+    function fetchDatasets() {
+      showLoader("Scanning Datasets...");
+      fetch(`${API_BASE}/api/datasets`)
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById("dataset-select");
+          select.innerHTML = "";
+          
+          if (data.datasets.length === 0) {
+            select.innerHTML = `<option value="">No datasets found</option>`;
+            hideLoader();
+            return;
+          }
+          
+          data.datasets.forEach(ds => {
+            const opt = document.createElement("option");
+            opt.value = ds;
+            opt.innerText = ds;
+            select.appendChild(opt);
+          });
+          
+          // Auto load first dataset
+          onDatasetChange();
+        })
+        .catch(err => {
+          showError("Could not fetch datasets. Ensure visualize.py is running!");
+          console.error(err);
+        });
+    }
+
+    // On Dataset selector dropdown change
+    function onDatasetChange() {
+      const select = document.getElementById("dataset-select");
+      const activeDs = select.value;
+      if (!activeDs) return;
+      
+      showLoader(`Loading ${activeDs}...`);
+      
+      fetch(`${API_BASE}/api/load_graph?dataset=${activeDs}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            showError(data.error);
+            return;
+          }
+          
+          // Update Stats
+          document.getElementById("stats-nodes").innerText = data.stats.nodes.toLocaleString();
+          document.getElementById("stats-edges").innerText = data.stats.edges.toLocaleString();
+          document.getElementById("stats-contracts").innerText = data.stats.contract_nodes.toLocaleString();
+          document.getElementById("stats-eoa").innerText = data.stats.eoa_nodes.toLocaleString();
+          
+          // Load default global subgraph
+          loadSubGraphGlobal();
+        })
+        .catch(err => {
+          showError(`Could not load dataset: ${activeDs}`);
+          console.error(err);
+        });
+    }
+
+    // Loader overlays helper
+    function showLoader(msg) {
+      const overlay = document.getElementById("canvas-loader");
+      document.getElementById("loader-text").innerText = msg;
+      overlay.classList.add("active");
+    }
+
+    function hideLoader() {
+      document.getElementById("canvas-loader").classList.remove("active");
+    }
+
+    function showError(msg) {
+      hideLoader();
+      alert(`[ERROR] ${msg}`);
+    }
+
+    // Search suggestion populator
+    function onNodeSearchInput() {
+      const query = document.getElementById("center-node-input").value.trim();
+      const suggestionsBox = document.getElementById("search-suggestions");
+      
+      if (query.length === 0) {
+        suggestionsBox.style.display = "none";
+        return;
+      }
+      
+      fetch(`${API_BASE}/api/search_node?query=${query}`)
+        .then(res => res.json())
+        .then(data => {
+          suggestionsBox.innerHTML = "";
+          if (data.found) {
+            const div = document.createElement("div");
+            div.className = "suggestion-item";
+            div.innerHTML = `<strong>Node ${data.node.id}</strong> (deg: ${data.node.degree})`;
+            div.onclick = () => {
+              document.getElementById("center-node-input").value = data.node.id;
+              suggestionsBox.style.display = "none";
+              loadSubGraphCenter();
+            };
+            suggestionsBox.appendChild(div);
+            suggestionsBox.style.display = "block";
+          } else if (data.suggestions && data.suggestions.length > 0) {
+            data.suggestions.forEach(item => {
+              const div = document.createElement("div");
+              div.className = "suggestion-item";
+              div.innerHTML = `Node ${item.id} (deg: ${item.degree})`;
+              div.onclick = () => {
+                document.getElementById("center-node-input").value = item.id;
+                suggestionsBox.style.display = "none";
+                loadSubGraphCenter();
+              };
+              suggestionsBox.appendChild(div);
+            });
+            suggestionsBox.style.display = "block";
+          } else {
+            suggestionsBox.style.display = "none";
+          }
+        });
+    }
+
+    // Render global central subgraph
+    function loadSubGraphGlobal() {
+      const maxNodes = document.getElementById("max-nodes-slider").value;
+      showLoader("Loading Global Subgraph...");
+      
+      fetch(`${API_BASE}/api/subgraph?max_nodes=${maxNodes}`)
+        .then(res => res.json())
+        .then(data => {
+          renderNetwork(data);
+        })
+        .catch(err => {
+          showError("Could not retrieve subgraph data.");
+          console.error(err);
+        });
+    }
+
+    // Render central node subgraph
+    function loadSubGraphCenter() {
+      const centerNode = document.getElementById("center-node-input").value.trim();
+      const maxNodes = document.getElementById("max-nodes-slider").value;
+      
+      if (!centerNode) {
+        alert("Please enter a valid Center Node ID first!");
+        return;
+      }
+      
+      showLoader(`Extracting neighborhood for Node ${centerNode}...`);
+      
+      fetch(`${API_BASE}/api/subgraph?center_node=${centerNode}&max_nodes=${maxNodes}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.nodes.length === 0) {
+            alert(`Node ${centerNode} was not found in the loaded graph!`);
+            hideLoader();
+            return;
+          }
+          renderNetwork(data);
+          
+          // Auto set as walk start node
+          document.getElementById("start-node-input").value = centerNode;
+        })
+        .catch(err => {
+          showError("Could not retrieve center subgraph data.");
+          console.error(err);
+        });
+    }
+
+    // Render the Graph Network in Vis.js
+    function renderNetwork(data) {
+      const container = document.getElementById("network-canvas");
+      
+      // Stylize nodes
+      const visNodes = data.nodes.map(n => {
+        const isContract = n.is_contract === 1;
+        return {
+          id: n.id,
+          label: n.label,
+          shape: isContract ? 'hexagon' : 'dot',
+          size: Math.max(10, Math.min(30, 10 + n.degree * 1.5)),
+          color: {
+            background: isContract ? varColor('--secondary') : '#4f46e5',
+            border: isContract ? '#ff79c6' : '#818cf8',
+            highlight: {
+              background: varColor('--accent'),
+              border: '#ffffff'
+            }
+          },
+          borderWidth: isContract ? 3 : 1.5,
+          font: {
+            color: '#f3f4f6',
+            size: 11,
+            face: 'Outfit'
+          },
+          title: `Node ID: ${n.id}<br>Type: ${isContract ? 'Contract' : 'EOA'}<br>Degree: ${n.degree}`
+        };
+      });
+
+      // Stylize edges
+      const visEdges = data.edges.map((e, idx) => {
+        const isFailed = e.is_failed === 1;
+        const normalizedWeight = Math.max(1, Math.min(10, Math.log1p(e.weight) * 2));
+        
+        return {
+          id: `e_${idx}`,
+          from: e.from,
+          to: e.to,
+          width: normalizedWeight,
+          arrows: 'to',
+          color: {
+            color: isFailed ? 'rgba(239, 68, 68, 0.45)' : 'rgba(0, 242, 254, 0.25)',
+            highlight: varColor('--accent'),
+            hover: '#ffffff'
+          },
+          dashes: isFailed,
+          title: `From: ${e.from}<br>To: ${e.to}<br>Time: ${e.timestamp}<br>Amount: ${e.weight}<br>Friction: ${e.friction.toFixed(4)}<br>Status: ${isFailed ? 'Failed' : 'Success'}`
+        };
+      });
+
+      nodesDataset = new vis.DataSet(visNodes);
+      edgesDataset = new vis.DataSet(visEdges);
+
+      const networkData = {
+        nodes: nodesDataset,
+        edges: edgesDataset
+      };
+
+      const options = {
+        physics: {
+          enabled: physicsEnabled,
+          barnesHut: {
+            gravitationalConstant: -1800,
+            centralGravity: 0.15,
+            springLength: 95,
+            springConstant: 0.04
+          },
+          stabilization: {
+            iterations: 80,
+            updateInterval: 10
+          }
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 100
+        }
+      };
+
+      network = new vis.Network(container, networkData, options);
+
+      // On select node, auto-populate start node
+      network.on("click", (params) => {
+        if (params.nodes.length > 0) {
+          const selectedNodeId = params.nodes[0];
+          document.getElementById("start-node-input").value = selectedNodeId;
+        }
+      });
+
+      network.on("stabilizationIterationsDone", () => {
+        hideLoader();
+      });
+
+      // Backup fallback loader close
+      setTimeout(() => {
+        hideLoader();
+      }, 3000);
+    }
+
+    // Get css variable color
+    function varColor(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    // Simulate Walks API call
+    function simulateWalk() {
+      const activeDs = document.getElementById("dataset-select").value;
+      if (!activeDs) return;
+      
+      const startNode = document.getElementById("start-node-input").value.trim();
+      const walkLength = document.getElementById("walk-len-slider").value;
+      const alpha = document.getElementById("alpha-slider").value;
+      const gamma = document.getElementById("gamma-slider").value;
+      const statePenalty = document.getElementById("penalty-slider").value;
+      
+      const typoEE = document.getElementById("typo-ee").value;
+      const typoEC = document.getElementById("typo-ec").value;
+      const typoCE = document.getElementById("typo-ce").value;
+      const typoCC = document.getElementById("typo-cc").value;
+      
+      // Determine gas_biased from current preset config
+      const gasBiased = presets[selectedPreset].gas_biased;
+
+      showLoader("Simulating Temporal Walks...");
+      
+      let url = `${API_BASE}/api/simulate_walk?start_node=${startNode}&walk_length=${walkLength}&alpha=${alpha}&gamma=${gamma}&state_penalty=${statePenalty}&eoa_to_eoa=${typoEE}&eoa_to_contract=${typoEC}&contract_to_eoa=${typoCE}&contract_to_contract=${typoCC}`;
+      
+      if (gasBiased && gasBiased !== 'none') {
+        url += `&gas_biased=${gasBiased}`;
+      }
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          hideLoader();
+          if (data.error) {
+            alert(`Simulation Error: ${data.error}`);
+            return;
+          }
+          
+          if (data.walk_steps.length === 0) {
+            alert("No steps generated. Start node might be isolated temporal-wise.");
+            return;
+          }
+          
+          currentWalkSteps = data.walk_steps;
+          document.getElementById("start-node-input").value = data.start_node;
+          
+          // Setup playback panel
+          document.getElementById("playback-panel").style.display = "flex";
+          const slider = document.getElementById("timeline-slider");
+          slider.max = currentWalkSteps.length - 1;
+          slider.value = 0;
+          
+          // Stop any running animations
+          stopPlayback();
+          
+          // Generate Timeline UI
+          populateTimelineUI();
+          
+          // Focus and highlight start node
+          jumpToStep(0);
+        })
+        .catch(err => {
+          showError("Walk simulation query failed.");
+          console.error(err);
+        });
+    }
+
+    // Populate Right Sidebar Step List
+    function populateTimelineUI() {
+      const container = document.getElementById("timeline-container");
+      container.innerHTML = "";
+      
+      currentWalkSteps.forEach((step, idx) => {
+        const div = document.createElement("div");
+        div.className = `timeline-step ${idx === 0 ? 'active' : ''}`;
+        div.id = `step-card-${idx}`;
+        div.onclick = () => jumpToStep(idx);
+        
+        const isContract = step.is_contract === 1;
+        const badgeClass = isContract ? 'step-badge-contract' : 'step-badge-eoa';
+        const badgeText = isContract ? 'Contract' : 'EOA';
+        
+        let detailsHtml = '';
+        if (idx > 0) {
+          const formattedVal = step.weight ? step.weight.toFixed(4) : '0';
+          const formatTime = step.timestamp;
+          const statusText = step.is_failed === 1 ? 'Failed' : 'Success';
+          const statusColor = step.is_failed === 1 ? 'var(--danger)' : 'var(--success)';
+          
+          detailsHtml = `
+            <div class="step-details" style="margin-top: 4px;">
+              <span>Val: ${formattedVal}</span>
+              <span>Time: ${formatTime}</span>
+              <span style="color: ${statusColor}; font-weight: 600;">${statusText}</span>
+            </div>
+          `;
+        } else {
+          detailsHtml = `<div class="step-details">Initial Entry Node</div>`;
+        }
+
+        div.innerHTML = `
+          <div class="step-header">
+            <span class="step-number">Step ${idx}</span>
+            <span class="step-node-id">Node ${step.node}</span>
+            <span class="step-badge ${badgeClass}">${badgeText}</span>
+          </div>
+          ${detailsHtml}
+        `;
+        
+        container.appendChild(div);
+      });
+    }
+
+    // Jump Playback to specific step
+    function jumpToStep(index) {
+      index = parseInt(index);
+      if (index < 0 || index >= currentWalkSteps.length) return;
+      
+      currentStepIndex = index;
+      
+      // Update Timeline Slider & text
+      document.getElementById("timeline-slider").value = index;
+      document.getElementById("playback-status").innerText = `Step ${index} / ${currentWalkSteps.length - 1}`;
+      
+      // Update UI active card
+      document.querySelectorAll(".timeline-step").forEach(card => card.classList.remove("active"));
+      const activeCard = document.getElementById(`step-card-${index}`);
+      if (activeCard) {
+        activeCard.classList.add("active");
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      
+      // Update Graph rendering highlights
+      highlightGraphWalk(index);
+      
+      // Populate Decision candidates breakdown
+      populateDecisionTrace(index);
+    }
+
+    // Visually color nodes and edges involved in the walk
+    function highlightGraphWalk(stepIndex) {
+      if (!nodesDataset || !edgesDataset) return;
+      
+      // Reset all custom highlights first
+      const allNodeIds = nodesDataset.getIds();
+      allNodeIds.forEach(id => {
+        const node = nodesDataset.get(id);
+        const origContract = node.is_contract === 1 || node.shape === 'hexagon';
+        nodesDataset.update({
+          id: id,
+          color: {
+            background: origContract ? varColor('--secondary') : '#4f46e5',
+            border: origContract ? '#ff79c6' : '#818cf8',
+            highlight: {
+              background: varColor('--accent'),
+              border: '#ffffff'
+            }
+          },
+          borderWidth: origContract ? 3 : 1.5
+        });
+      });
+      
+      const allEdgeIds = edgesDataset.getIds();
+      allEdgeIds.forEach(id => {
+        const edge = edgesDataset.get(id);
+        const isFailed = edge.title.includes("Failed");
+        edgesDataset.update({
+          id: id,
+          color: {
+            color: isFailed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 242, 254, 0.1)',
+            highlight: varColor('--accent')
+          },
+          width: Math.max(1, edge.width - 2) // slight default width reset
+        });
+      });
+
+      // Render Walk Up to stepIndex
+      let lastNodeId = null;
+      for (let i = 0; i <= stepIndex; i++) {
+        const step = currentWalkSteps[i];
+        const nodeId = step.node;
+        
+        // Highlight Node
+        if (nodesDataset.get(nodeId)) {
+          nodesDataset.update({
+            id: nodeId,
+            color: {
+              background: varColor('--accent'),
+              border: '#ffffff'
+            },
+            borderWidth: 2.5
+          });
+        }
+        
+        // Highlight connection Edge
+        if (i > 0 && lastNodeId) {
+          const matchingEdges = edgesDataset.get({
+            filter: function (item) {
+              return (item.from === lastNodeId && item.to === nodeId) || 
+                     (item.from === nodeId && item.to === lastNodeId);
+            }
+          });
+          
+          if (matchingEdges.length > 0) {
+            // Find temporal matching edge
+            const perfectEdge = matchingEdges.find(e => e.title.includes(`Time: ${step.timestamp}`));
+            const edgeToHighlight = perfectEdge || matchingEdges[0];
+            
+            edgesDataset.update({
+              id: edgeToHighlight.id,
+              color: {
+                color: varColor('--accent')
+              },
+              width: 5
+            });
+          }
+        }
+        
+        lastNodeId = nodeId;
+      }
+      
+      // Center and pan camera to the active node in graph
+      const activeNode = currentWalkSteps[stepIndex].node;
+      if (nodesDataset.get(activeNode)) {
+        network.focus(activeNode, {
+          scale: 1.0,
+          animation: {
+            duration: 800,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      }
+    }
+
+    // Populate Right Sidebar transition probability trace
+    function populateDecisionTrace(stepIndex) {
+      const container = document.getElementById("decision-container");
+      container.innerHTML = "";
+      
+      const step = currentWalkSteps[stepIndex];
+      if (!step || !step.candidates || step.candidates.length === 0) {
+        if (stepIndex === 0) {
+          container.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 30px 10px;">
+              Initial node entry. No previous transitions. Click "Step Forward" to watch the walk transition.
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 30px 10px;">
+              No candidates generated. This was a dead-end node temporal-wise.
+            </div>
+          `;
+        }
+        return;
+      }
+      
+      const divList = document.createElement("div");
+      divList.className = "decision-list";
+      
+      // Sort candidates by final probability descending
+      const sorted = [...step.candidates].sort((a,b) => b.normalized_prob - a.normalized_prob);
+      
+      sorted.forEach(c => {
+        const item = document.createElement("div");
+        item.className = `decision-item ${c.selected ? 'selected' : ''}`;
+        
+        const isFailedText = c.is_failed === 1 ? '<span style="color:var(--danger)">Failed</span>' : 'Success';
+        const formattedPercent = (c.normalized_prob * 100).toFixed(1) + "%";
+        
+        // Detail components string depending on what's active
+        let debugFormula = `T-bias: ${c.raw_time_prob.toFixed(3)} | A-bias: ${c.raw_amount_prob.toFixed(3)}`;
+        if (selectedPreset === 'friction') {
+          debugFormula += ` | F-inverse: ${c.raw_friction_prob.toFixed(3)}`;
+        }
+        if (c.penalty !== 1.0) {
+          debugFormula += ` | Penalty: &times;${c.penalty}`;
+        }
+        if (c.typo_weight !== 1.0) {
+          debugFormula += ` | Typo: &times;${c.typo_weight} (${c.typo_type})`;
+        }
+
+        item.innerHTML = `
+          <div class="decision-item-header">
+            <span>Node ${c.neighbor} (${isFailedText})</span>
+            <span style="color: ${c.selected ? 'var(--success)' : 'var(--primary)'}; font-weight:700;">${formattedPercent}</span>
+          </div>
+          <div class="decision-item-prob-bar">
+            <div class="decision-item-prob-fill" style="width: ${c.normalized_prob * 100}%"></div>
+          </div>
+          <div class="decision-stats-row">
+            <span>Val: ${c.weight.toFixed(4)} | Time: ${c.timestamp}</span>
+          </div>
+          <div class="decision-stats-row" style="opacity: 0.7; font-size: 0.65rem;">
+            <span>${debugFormula}</span>
+          </div>
+        `;
+        
+        divList.appendChild(item);
+      });
+      
+      container.appendChild(divList);
+    }
+
+    // Playback control functions
+    function togglePlay() {
+      const btn = document.getElementById("play-pause-btn");
+      if (isPlaying) {
+        stopPlayback();
+      } else {
+        startPlayback();
+      }
+    }
+
+    function startPlayback() {
+      isPlaying = true;
+      const btn = document.getElementById("play-pause-btn");
+      btn.innerHTML = `<i data-lucide="pause" style="fill: currentColor; width:20px;height:20px;"></i>`;
+      lucide.createIcons();
+      
+      // If we are at the end, start from 0
+      if (currentStepIndex >= currentWalkSteps.length - 1) {
+        currentStepIndex = -1;
+      }
+      
+      playbackInterval = setInterval(() => {
+        nextStep();
+        if (currentStepIndex >= currentWalkSteps.length - 1) {
+          stopPlayback();
+        }
+      }, playbackSpeed);
+    }
+
+    function stopPlayback() {
+      isPlaying = false;
+      const btn = document.getElementById("play-pause-btn");
+      btn.innerHTML = `<i data-lucide="play" style="fill: currentColor; width:20px;height:20px;"></i>`;
+      lucide.createIcons();
+      if (playbackInterval) {
+        clearInterval(playbackInterval);
+        playbackInterval = null;
+      }
+    }
+
+    function nextStep() {
+      if (currentStepIndex < currentWalkSteps.length - 1) {
+        jumpToStep(currentStepIndex + 1);
+      }
+    }
+
+    function prevStep() {
+      if (currentStepIndex > 0) {
+        jumpToStep(currentStepIndex - 1);
+      }
+    }
+  </script>
+</body>
+</html>

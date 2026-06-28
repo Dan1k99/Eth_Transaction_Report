@@ -1,0 +1,47 @@
+=== ppt/slides/slide1.xml ===
+“Inferring the evolution of Ethereum transaction networks via link prediction” Dan Lin, Jiajing Wu, Qi Xuan, and Chi K. Tse Published in Physica A 	2022
+
+=== ppt/slides/slide2.xml ===
+
+
+=== ppt/slides/slide3.xml ===
+
+
+=== ppt/slides/slide4.xml ===
+
+
+=== ppt/slides/slide5.xml ===
+
+
+=== ppt/slides/slide6.xml ===
+
+
+=== ppt/slides/slide7.xml ===
+
+
+=== ppt/slides/slide8.xml ===
+
+
+=== ppt/slides/slide9.xml ===
+
+
+=== ppt/slides/slide10.xml ===
+
+
+=== ppt/slides/slide11.xml ===
+
+
+=== ppt/slides/slide12.xml ===
+
+
+=== ppt/slides/slide13.xml ===
+
+
+=== ppt/slides/slide14.xml ===
+
+
+=== ppt/slides/slide15.xml ===
+Iterative Method Improvements: ROC-AUC by Dataset Random-walk biasing experiments scored against the Eth_0_999k and Eth_1M_1.99M benchmarks. Phase / Run Method Theoretical Logic  Eth 0–999k ROC-AUC (Δ) Eth 1M–1.99M ROC-AUC (Δ) Verdict Phase 1 Gas-Friction Bias Penalizes high-gas, low-value transitions to steer walks away from noisy contract hubs. (+2.13%) (+0.42%) Better Phase 2 Gas / Error Penalization Down-scales failed-transaction edges since they transfer no value. (+0.38%) (+0.42%) Marginally Better Phase 3 Without Failed Tx Prunes failed transactions from the graph entirely as pure noise. (+2.25%) (-0.28%) Inconsistent Phase 4 State-Penalty Dynamically down-scales failed edges instead of deleting them. (-0.69% avg) (-0.70%) Worse Phase 5 State-Penalty + Typology Biases walks by account role (EOA vs. smart contract) to split transfers from calls. (+2.26%) (-0.56%) Inconsistent Phase 6 / R2 Bipartite Folding Prunes DeFi routers, linking senders and receivers directly to capture true asset flow. (+1.63%) (-0.42%) Inconsistent Run 4 Absolute Gas Premium Rewards higher priority fees on EOA-to-EOA edges to model actor urgency. (+0.13%) (+0.14%) Marginally Better Run 5 Revert Reconnection Simulates EVM rollback: visits the contract node, then returns to the sender EOA. (+0.13%) (+1.12%) Better Run 6 Relative Gas Premium Normalizes gas fee by block-median fee to isolate priority premiums. (+1.25%) (0.00%) Better
+
+=== ppt/slides/slide16.xml ===
+Thank You

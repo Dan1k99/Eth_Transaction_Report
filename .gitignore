@@ -1,0 +1,25 @@
+# Virtual environments
+.venv/
+.venv_311/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Editor configs
+.vscode/
+
+# Large generated data files
+data/
+*.pickle
+*.txt
+emb_G1.txt
+!pdf_content.txt
+!slides_content.txt
+
+# Temp/Scratch files
+scratch_*.py

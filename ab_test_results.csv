@@ -1,0 +1,68 @@
+Dataset,Walks,Method,ROC-AUC,Average-Precision
+Eth_0_999k,10,Baseline (Paper),0.7230576441102757,0.7117921065289486
+Eth_0_999k,10,Gas-Friction,0.744360902255639,0.7319739440767818
+Eth_0_999k,10,Baseline,0.7393,0.7280
+Eth_0_999k,10,Baseline + Gas/Error,0.7431,0.7349
+Eth_0_999k,10,Baseline,0.7331,0.7188
+Eth_0_999k,10,Without Failed Tx,0.7556,0.7432
+Eth_1M_1_99M,10,Baseline (Paper),0.9199438202247191,0.9105521053954123
+Eth_1M_1_99M,10,Gas-Friction,0.9241573033707865,0.9122278792134833
+Eth_1M_1_99M,10,Baseline,0.9129,0.8950
+Eth_1M_1_99M,10,Baseline + Gas/Error,0.9171,0.9003
+Eth_1M_1_99M,10,Baseline,0.9143,0.8964
+Eth_1M_1_99M,10,Without Failed Tx,0.9115,0.8947
+Eth_0_999k,10,Without Failed Tx,0.738095,0.724744
+Eth_0_999k,10,Baseline,0.754386,0.742979
+Eth_0_999k,10,State-Penalty,0.729323,0.723382
+Eth_0_999k,10,Without Failed Tx,0.765664,0.754213
+Eth_0_999k,10,Baseline,0.731830,0.719510
+Eth_0_999k,10,State-Penalty,0.743108,0.731748
+Eth_0_999k,10,State-Penalty + Typology,0.754386,0.739945
+Eth_1M_1_99M,10,Without Failed Tx,0.855337,0.844769
+Eth_1M_1_99M,10,Baseline,0.851124,0.841814
+Eth_1M_1_99M,10,State-Penalty,0.844101,0.828751
+Eth_1M_1_99M,10,State-Penalty + Typology,0.845506,0.831324
+Eth_0_999k,10,Baseline,0.730576,0.717274
+Eth_0_999k,10,Baseline,0.728070,0.718855
+Eth_0_999k,10,Bipartite Folding,0.729323,0.718027
+Eth_0_999k,10,Bipartite Folding,0.745614,0.732217
+Eth_0_999k,10,Shadow Nodes,0.721805,0.711567
+Eth_1M_1_99M,10,Baseline,0.853933,0.845889
+Eth_0_999k,10,Shadow Nodes,0.735589,0.720319
+Eth_1M_1_99M,10,Bipartite Folding,0.849719,0.835524
+Eth_1M_1_99M,10,Baseline,0.852528,0.839520
+Eth_1M_1_99M,10,Shadow Nodes,0.853933,0.842135
+Eth_1M_1_99M,10,Bipartite Folding,0.852528,0.841965
+Eth_1M_1_99M,10,Shadow Nodes,0.849719,0.833187
+Eth_0_999k,10,Baseline,0.741855,0.728480
+Eth_0_999k,10,Bipartite Folding,0.731830,0.721551
+Eth_0_999k,10,Shadow Nodes,0.749373,0.733039
+Eth_0_999k,10,Gas Premium,0.725564,0.708540
+Eth_1M_1_99M,10,Baseline,0.859551,0.850229
+Eth_1M_1_99M,10,Bipartite Folding,0.856742,0.844938
+Eth_1M_1_99M,10,Shadow Nodes,0.852528,0.840733
+Eth_1M_1_99M,10,Gas Premium,0.848315,0.839008
+Eth_0_999k,10,Baseline,0.749373,0.741178
+Eth_0_999k,10,Bipartite Folding,0.765664,0.758548
+Eth_0_999k,10,Shadow Nodes,0.729323,0.720104
+Eth_0_999k,10,Gas Premium,0.750627,0.738208
+Eth_0_999k,10,Revert Reconnection,0.750627,0.742429
+Eth_0_999k,10,Relative Gas Premium,0.761905,0.753684
+Eth_0_999k,10,Combined Native,0.748120,0.735714
+Eth_1M_1_99M,10,Baseline,0.856742,0.849985
+Eth_1M_1_99M,10,Bipartite Folding,0.852528,0.837145
+Eth_1M_1_99M,10,Shadow Nodes,0.853933,0.844619
+Eth_1M_1_99M,10,Gas Premium,0.858146,0.847573
+Eth_1M_1_99M,10,Revert Reconnection,0.867978,0.858645
+Eth_1M_1_99M,10,Relative Gas Premium,0.856742,0.849985
+Eth_1M_1_99M,10,Combined Native,0.855337,0.844769
+Eth_0_999k,10,Baseline,0.746867,0.736533
+Eth_0_999k,10,Contract Failure-Rate,0.761905,0.753684
+Eth_0_999k,10,Bipartite Folding,0.763158,0.753843
+Eth_0_999k,10,Gas-Friction,0.733083,0.717834
+Eth_0_999k,10,Relative Gas Premium,0.751880,0.743679
+Eth_1M_1_99M,10,Baseline,0.856742,0.848695
+Eth_1M_1_99M,10,Contract Failure-Rate,0.852528,0.844486
+Eth_1M_1_99M,10,Bipartite Folding,0.865169,0.854584
+Eth_1M_1_99M,10,Gas-Friction,0.863764,0.855710
+Eth_1M_1_99M,10,Relative Gas Premium,0.858146,0.850098
